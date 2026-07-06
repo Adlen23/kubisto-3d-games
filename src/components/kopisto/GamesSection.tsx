@@ -1,14 +1,17 @@
-'use client' // v2
+'use client' // v2 - Bilingual support
 
 import { motion } from 'framer-motion'
 import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface Game {
   id: number
-  title: string
-  description: string
+  titleAr: string
+  titleEn: string
+  descAr: string
+  descEn: string
   icon: string
   color: string
   gradient: string
@@ -22,11 +25,13 @@ interface Game {
 }
 
 const games: Game[] = [
-  // Math Category - Sky Blue Theme
+  // Math Category
   {
     id: 1,
-    title: 'Kopisto Runner',
-    description: 'Jump on platforms and collect the right math answer! A Mario-style platformer!',
+    titleAr: 'عدّاء كوبيستو',
+    titleEn: 'Kopisto Runner',
+    descAr: 'اقفز على المنصات واجمع الإجابة الصحيحة للسؤال الرياضي! لعبة بلاتفورمر مثيرة بأسلوب ماريو!',
+    descEn: 'Jump on platforms and collect the right math answer! A Mario-style platformer!',
     icon: '🏃',
     color: 'from-sky-500 to-sky-600',
     gradient: 'from-sky-50 to-sky-50',
@@ -40,8 +45,10 @@ const games: Game[] = [
   },
   {
     id: 2,
-    title: 'Math Quiz Challenge',
-    description: 'Test your math skills! Answer addition, subtraction and multiplication questions!',
+    titleAr: 'تحدي الرياضيات',
+    titleEn: 'Math Quiz Challenge',
+    descAr: 'اختبر مهاراتك الحسابية! أجب عن أسئلة الجمع والطرح والضرب مع كوبيستو!',
+    descEn: 'Test your math skills! Answer addition, subtraction and multiplication questions!',
     icon: '🧮',
     color: 'from-sky-500 to-sky-600',
     gradient: 'from-sky-50 to-sky-50',
@@ -54,8 +61,10 @@ const games: Game[] = [
   },
   {
     id: 3,
-    title: 'Number Order',
-    description: 'Tap the numbers in ascending order! A fun way to learn number sequences!',
+    titleAr: 'ترتيب الأرقام',
+    titleEn: 'Number Order',
+    descAr: 'اضغط على الأرقام بالترتيب من الأصغر للأكبر! طريقة ممتعة لتعلّم التسلسل!',
+    descEn: 'Tap the numbers in ascending order! A fun way to learn number sequences!',
     icon: '🔢',
     color: 'from-sky-500 to-sky-600',
     gradient: 'from-sky-50 to-sky-50',
@@ -68,8 +77,10 @@ const games: Game[] = [
   },
   {
     id: 4,
-    title: 'Math Balloon Pop',
-    description: 'Pop the balloon with the correct answer! Solve equations and pop balloons!',
+    titleAr: 'فقع البالونات',
+    titleEn: 'Math Balloon Pop',
+    descAr: 'فقع البالون الذي يحمل الإجابة الصحيحة! حل المعادلات وانفجر البالونات!',
+    descEn: 'Pop the balloon with the correct answer! Solve equations and pop balloons!',
     icon: '🎈',
     color: 'from-sky-500 to-sky-600',
     gradient: 'from-sky-50 to-sky-50',
@@ -78,12 +89,13 @@ const games: Game[] = [
     players: 'Solo',
     href: '/play/math-balloon',
     playable: true,
-    tag: 'New',
   },
   {
     id: 5,
-    title: 'Count with Kopisto',
-    description: 'Learn numbers and counting from 1 to 20 in a fun way! How many fruits do you see?',
+    titleAr: 'عدّ مع كوبيستو',
+    titleEn: 'Count with Kopisto',
+    descAr: 'تعلّم الأرقام والعد من 1 إلى 20 بطريقة ممتعة! كم ثمرة ترى؟',
+    descEn: 'Learn numbers and counting from 1 to 20 in a fun way! How many fruits?',
     icon: '🔢',
     color: 'from-sky-500 to-sky-600',
     gradient: 'from-sky-50 to-sky-50',
@@ -93,11 +105,13 @@ const games: Game[] = [
     href: '/play/counting',
     playable: true,
   },
-  // Language Category - Yellow/Amber Theme
+  // Language Category
   {
     id: 6,
-    title: 'Letter Adventure',
-    description: 'Jump and collect Arabic letters in the correct order! A fun alphabet platformer!',
+    titleAr: 'مغامرة الحروف',
+    titleEn: 'Letter Adventure',
+    descAr: 'اقفز واجمع الحروف العربية بالترتيب الصحيح! لعبة بلاتفورمر ممتعة لتعلّم الأبجدية!',
+    descEn: 'Jump and collect Arabic letters in the correct order! A fun platformer to learn the alphabet!',
     icon: '📖',
     color: 'from-amber-500 to-orange-600',
     gradient: 'from-amber-50 to-orange-50',
@@ -107,12 +121,13 @@ const games: Game[] = [
     href: '/play/letter-adventure',
     playable: true,
     tag: 'Popular',
-    coverImage: '/word-puzzles.jpeg',
   },
   {
     id: 7,
-    title: 'Word Spelling',
-    description: 'Drag and drop letters to spell words! Learn vocabulary with fun images!',
+    titleAr: 'تهجئة الكلمات',
+    titleEn: 'Word Spelling',
+    descAr: 'رتّب الحروف لتكوين الكلمة الصحيحة! تعلّم المفردات مع صور ممتعة!',
+    descEn: 'Arrange the letters to spell the word correctly! Learn vocabulary with fun pictures!',
     icon: '✏️',
     color: 'from-amber-500 to-orange-600',
     gradient: 'from-amber-50 to-orange-50',
@@ -125,8 +140,10 @@ const games: Game[] = [
   },
   {
     id: 8,
-    title: 'Arabic Alphabet',
-    description: 'Learn Arabic letters one by one with pronunciation! Quiz mode to test yourself!',
+    titleAr: 'تعلّم الحروف العربية',
+    titleEn: 'Arabic Alphabet',
+    descAr: 'تعلّم الحروف العربية واحدة واحدة مع طريقة النطق! اختبر نفسك!',
+    descEn: 'Learn Arabic letters one by one with pronunciation! Test yourself!',
     icon: '📝',
     color: 'from-amber-500 to-orange-600',
     gradient: 'from-amber-50 to-orange-50',
@@ -139,8 +156,10 @@ const games: Game[] = [
   },
   {
     id: 9,
-    title: 'Word-Picture Match',
-    description: 'Match pictures to their words! A bilingual memory game in Arabic and English!',
+    titleAr: 'طابق الكلمة والصورة',
+    titleEn: 'Word-Picture Match',
+    descAr: 'طابق كل صورة مع الكلمة المناسبة! لعبة ذاكرة ثنائية اللغة!',
+    descEn: 'Match each picture with its word! A bilingual memory game!',
     icon: '🃏',
     color: 'from-amber-500 to-orange-600',
     gradient: 'from-amber-50 to-orange-50',
@@ -151,11 +170,13 @@ const games: Game[] = [
     playable: true,
     tag: 'New',
   },
-  // Science Category - Green/Teal Theme
+  // Science Category
   {
     id: 10,
-    title: 'Animal Sounds',
-    description: 'Listen to animal sounds and pick the right animal! Fun facts included!',
+    titleAr: 'أصوات الحيوانات',
+    titleEn: 'Animal Sounds',
+    descAr: 'استمع لأصوات الحيوانات واختر الحيوان المناسب! معلومات ممتعة!',
+    descEn: 'Listen to animal sounds and pick the right animal! Fun facts included!',
     icon: '🦁',
     color: 'from-emerald-500 to-teal-600',
     gradient: 'from-emerald-50 to-teal-50',
@@ -169,8 +190,10 @@ const games: Game[] = [
   },
   {
     id: 11,
-    title: 'Solar System Explorer',
-    description: 'Discover planets and learn amazing facts! Explore the solar system with Kopisto!',
+    titleAr: 'استكشاف المجموعة الشمسية',
+    titleEn: 'Solar System Explorer',
+    descAr: 'اكتشف الكواكب وتعلّم معلومات مدهشة! استكشف مع كوبيستو!',
+    descEn: 'Discover planets and learn amazing facts! Explore the solar system with Kopisto!',
     icon: '🪐',
     color: 'from-emerald-500 to-teal-600',
     gradient: 'from-emerald-50 to-teal-50',
@@ -183,8 +206,10 @@ const games: Game[] = [
   },
   {
     id: 12,
-    title: 'Color Mixing Lab',
-    description: 'Mix colors to create new ones! Learn color theory in Kopisto\'s science lab!',
+    titleAr: 'مختبر الألوان',
+    titleEn: 'Color Mixing Lab',
+    descAr: 'امزج الألوان لاكتشاف ألوان جديدة! تعلّم نظرية الألوان في مختبر كوبيستو!',
+    descEn: "Mix colors to discover new ones! Learn color theory in Kopisto's lab!",
     icon: '🧪',
     color: 'from-emerald-500 to-teal-600',
     gradient: 'from-emerald-50 to-teal-50',
@@ -195,42 +220,48 @@ const games: Game[] = [
     playable: true,
     tag: 'New',
   },
-  // Art/Creativity Category - Orange/Pink Theme
+  // Art Category
   {
     id: 13,
-    title: 'Kopisto Memory',
-    description: 'Test your memory! Flip the cards and find matching pairs!',
+    titleAr: 'ذاكرة كوبيستو',
+    titleEn: 'Kopisto Memory',
+    descAr: 'اختبر ذاكرتك! اقلب البطاقات واعثر على الأزواج المتشابهة!',
+    descEn: 'Test your memory! Flip the cards and find matching pairs!',
     icon: '🧠',
     color: 'from-orange-500 to-orange-600',
     gradient: 'from-orange-50 to-orange-50',
     category: 'Art',
     difficulty: 'Medium',
-    players: 'Duo',
+    players: 'Solo',
     href: '/play/memory',
     playable: true,
+    tag: 'New',
   },
   {
     id: 14,
-    title: 'Drawing Canvas',
-    description: 'Draw and create art with colors and brushes! Trace templates and express yourself!',
+    titleAr: 'لوحة الرسم',
+    titleEn: 'Drawing Canvas',
+    descAr: 'ارسم وابدع بالألوان والفرش! تتبع القوالب وعبر عن نفسك!',
+    descEn: 'Draw and create with colors and brushes! Follow templates and express yourself!',
     icon: '🎨',
-    color: 'from-pink-500 to-rose-600',
-    gradient: 'from-pink-50 to-rose-50',
+    color: 'from-orange-500 to-orange-600',
+    gradient: 'from-orange-50 to-orange-50',
     category: 'Art',
     difficulty: 'Easy',
     players: 'Solo',
     href: '/play/drawing',
     playable: true,
     tag: 'New',
-    coverImage: '/art-creativity.jpeg',
   },
   {
     id: 15,
-    title: 'Pattern Game',
-    description: 'What comes next in the pattern? Train your brain with fun sequences!',
+    titleAr: 'تعرّف على النمط',
+    titleEn: 'Pattern Game',
+    descAr: 'ما الذي يأتي بعد في النمط؟ درّب عقلك مع تسلسلات ممتعة!',
+    descEn: 'What comes next in the pattern? Train your brain with fun sequences!',
     icon: '🧩',
-    color: 'from-orange-500 to-amber-600',
-    gradient: 'from-orange-50 to-amber-50',
+    color: 'from-orange-500 to-orange-600',
+    gradient: 'from-orange-50 to-orange-50',
     category: 'Art',
     difficulty: 'Medium',
     players: 'Solo',
@@ -240,11 +271,13 @@ const games: Game[] = [
   },
   {
     id: 16,
-    title: 'Music Piano',
-    description: 'Play beautiful melodies on a colorful piano! Follow along or create your own music!',
+    titleAr: 'موسيقى البيانو',
+    titleEn: 'Music Piano',
+    descAr: 'اعزف ألحاناً جميلة على بيانو ملون! اتبع اللحن أو أنشئ موسيقاك!',
+    descEn: 'Play beautiful melodies on a colorful piano! Follow the tune or create your own!',
     icon: '🎹',
-    color: 'from-violet-500 to-purple-600',
-    gradient: 'from-violet-50 to-purple-50',
+    color: 'from-orange-500 to-orange-600',
+    gradient: 'from-orange-50 to-orange-50',
     category: 'Art',
     difficulty: 'Easy',
     players: 'Solo',
@@ -257,11 +290,42 @@ const games: Game[] = [
 const categories = ['All', 'Math', 'Language', 'Science', 'Art']
 
 export default function GamesSection() {
+  const { isAr, t } = useLanguage()
+  const gp = t.gamesPage
   const [activeCategory, setActiveCategory] = useState('All')
 
   const filteredGames = activeCategory === 'All'
     ? games
     : games.filter(g => g.category === activeCategory)
+
+  // ترجمات التصنيفات
+  const categoryLabels: Record<string, { ar: string; en: string; emoji: string }> = {
+    'All': { ar: 'الكل', en: 'All', emoji: '🌟' },
+    'Math': { ar: 'رياضيات', en: 'Math', emoji: '🧮' },
+    'Language': { ar: 'لغة عربية', en: 'Language', emoji: '📝' },
+    'Science': { ar: 'علوم', en: 'Science', emoji: '🔬' },
+    'Art': { ar: 'فنون', en: 'Art', emoji: '🎨' },
+  }
+
+  // ترجمات الصعوبة
+  const difficultyLabels: Record<string, { ar: string; en: string }> = {
+    'Easy': { ar: 'سهل', en: 'Easy' },
+    'Medium': { ar: 'متوسط', en: 'Medium' },
+    'Hard': { ar: 'صعب', en: 'Hard' },
+  }
+
+  // ترجمات اللاعبين
+  const playerLabels: Record<string, { ar: string; en: string }> = {
+    'Solo': { ar: 'فردي', en: 'Solo' },
+    'Duo': { ar: 'ثنائي', en: 'Duo' },
+  }
+
+  // ترجمات الوسوم
+  const tagLabels: Record<string, { ar: string; en: string }> = {
+    'Popular': { ar: 'الأشهر', en: 'Popular' },
+    'New': { ar: 'جديد', en: 'New' },
+    'Coming': { ar: 'قريباً', en: 'Coming' },
+  }
 
   return (
     <section id="games" className="py-16 md:py-20 bg-white relative">
@@ -282,10 +346,14 @@ export default function GamesSection() {
             🎮
           </motion.span>
           <h2 className="text-3xl md:text-4xl font-bold text-sky-900 mb-4">
-            Fun & <span className="bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">Educational</span> Games!
+            {isAr ? (
+              <>ألعاب <span className="bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">ممتعة</span> ومعلومة!</>
+            ) : (
+              <>Fun & <span className="bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">Educational</span> Games!</>
+            )}
           </h2>
           <p className="text-sky-600/70 text-lg max-w-2xl mx-auto">
-            Discover a variety of educational games designed specifically to develop your child&apos;s skills
+            {gp.description}
           </p>
         </motion.div>
 
@@ -309,7 +377,7 @@ export default function GamesSection() {
               whileTap={{ scale: 0.95 }}
               onClick={() => setActiveCategory(cat)}
             >
-              {cat === 'Math' && '🧮 '}{cat === 'Language' && '📝 '}{cat === 'Science' && '🔬 '}{cat === 'Art' && '🎨 '}{cat}
+              {categoryLabels[cat].emoji} {isAr ? categoryLabels[cat].ar : categoryLabels[cat].en}
             </motion.button>
           ))}
         </motion.div>
@@ -336,7 +404,7 @@ export default function GamesSection() {
                     <>
                       <Image
                         src={game.coverImage}
-                        alt={game.title}
+                        alt={isAr ? game.titleAr : game.titleEn}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
@@ -352,13 +420,14 @@ export default function GamesSection() {
                       {game.icon}
                     </motion.div>
                   )}
+
                   {game.tag && (
                     <div className={`absolute top-2 left-2 px-2 py-0.5 rounded-lg text-xs font-bold z-10 ${
                       game.tag === 'Coming' ? 'bg-gray-200 text-gray-600' :
                       game.tag === 'Popular' ? 'bg-rose-400 text-white' :
                       'bg-orange-400 text-white'
                     }`}>
-                      {game.tag}
+                      {isAr ? tagLabels[game.tag]?.ar : tagLabels[game.tag]?.en || game.tag}
                     </div>
                   )}
                   {/* Floating icon on cover images */}
@@ -377,8 +446,8 @@ export default function GamesSection() {
 
                 {/* Game Info */}
                 <div className="p-5">
-                  <h3 className="font-bold text-sky-900 text-lg mb-2">{game.title}</h3>
-                  <p className="text-sky-600/60 text-sm leading-relaxed mb-3">{game.description}</p>
+                  <h3 className="font-bold text-sky-900 text-lg mb-2">{isAr ? game.titleAr : game.titleEn}</h3>
+                  <p className="text-sky-600/60 text-sm leading-relaxed mb-3">{isAr ? game.descAr : game.descEn}</p>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className={`text-xs px-2 py-1 rounded-lg font-medium ${
@@ -386,13 +455,13 @@ export default function GamesSection() {
                         game.difficulty === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
                         'bg-red-100 text-red-700'
                       }`}>
-                        {game.difficulty}
+                        {isAr ? difficultyLabels[game.difficulty]?.ar : difficultyLabels[game.difficulty]?.en || game.difficulty}
                       </span>
                       <span className="text-xs px-2 py-1 rounded-lg bg-sky-100 text-sky-700 font-medium">
-                        {game.players}
+                        {isAr ? playerLabels[game.players]?.ar : playerLabels[game.players]?.en || game.players}
                       </span>
                       <span className="text-xs px-2 py-1 rounded-lg bg-orange-100 text-orange-700 font-medium">
-                        {game.category}
+                        {isAr ? categoryLabels[game.category]?.ar : categoryLabels[game.category]?.en || game.category}
                       </span>
                     </div>
                     <div className={`w-8 h-8 rounded-full bg-gradient-to-r ${game.color} text-white flex items-center justify-center text-sm shadow-md ${
@@ -409,7 +478,7 @@ export default function GamesSection() {
                   className="absolute inset-0 bg-gradient-to-t from-sky-900/80 via-sky-900/20 to-transparent flex items-end justify-center pb-6 sm:pb-8 pointer-events-none opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 [@media(hover:none)]:from-sky-900/50 transition-opacity"
                 >
                   <div className={`bg-gradient-to-r ${game.color} text-white px-6 py-3 rounded-xl font-bold shadow-xl`}>
-                    Play Now! 🎮
+                    {isAr ? 'العب الآن! 🎮' : 'Play Now! 🎮'}
                   </div>
                 </motion.div>
               )}
