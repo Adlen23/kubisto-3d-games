@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Fredoka } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { LanguageProvider } from "@/context/LanguageContext";
@@ -9,6 +10,13 @@ const fredoka = Fredoka({
   variable: "--font-fredoka",
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
+});
+
+// خط Milan Display Black للنسخة العربية
+const milanDisplay = localFont({
+  src: "./fonts/Milan-Display-Black.otf",
+  variable: "--font-milan",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -35,8 +43,8 @@ export default function RootLayout({
         <link rel="preload" href="/kopisto-run-flip.webp" as="image" type="image/webp" />
       </head>
       <body
-        className={`${fredoka.variable} antialiased bg-background text-foreground`}
-        style={{ fontFamily: 'var(--font-fredoka), sans-serif' }}
+        className={`${fredoka.variable} ${milanDisplay.variable} antialiased bg-background text-foreground`}
+        style={{ fontFamily: 'var(--font-milan), var(--font-fredoka), sans-serif' }}
       >
         <LanguageProvider>
           {children}
