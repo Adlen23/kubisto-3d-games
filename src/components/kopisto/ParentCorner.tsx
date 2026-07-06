@@ -395,24 +395,116 @@ function StoryCreatorSection() {
   const pc = t.parentCorner.storyCreator
   const [childName, setChildName] = useState('')
   const [childAge, setChildAge] = useState('')
-  const [hobbies, setHobbies] = useState('')
-  const [storyType, setStoryType] = useState<'adventure' | 'bedtime' | 'educational'>('adventure')
+  const [storyIdea, setStoryIdea] = useState('')
+  const [storyType, setStoryType] = useState<'adventure' | 'bedtime' | 'educational' | 'fantasy' | 'friendship'>('adventure')
   const [story, setStory] = useState('')
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState('')
   const [storyHistory, setStoryHistory] = useState<Array<{ title: string; date: string }>>([])
+  const [referenceImage, setReferenceImage] = useState<string | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [generationStep, setGenerationStep] = useState<string>('')
+  const [generatedStory, setGeneratedStory] = useState<{
+    title: string
+    pages: Array<{
+      pageNumber: number
+      textAr: string
+      textEn: string
+      imagePrompt: string
+      imageUrl: string | null
+      imageGenerated: boolean
+    }>
+  } | null>(null)
+  const [currentStoryPage, setCurrentStoryPage] = useState(0)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const storyTypes = [
-    { id: 'adventure' as const, emoji: '🗺️', color: 'from-orange-400 to-amber-500', label: pc.adventureStory || (isAr ? 'قصة مغامرة' : 'Adventure Story') },
-    { id: 'bedtime' as const, emoji: '🌙', color: 'from-indigo-400 to-purple-600', label: pc.bedtimeStory || (isAr ? 'قصة قبل النوم' : 'Bedtime Story') },
-    { id: 'educational' as const, emoji: '🎓', color: 'from-emerald-400 to-teal-600', label: pc.educationalStory || (isAr ? 'قصة تعليمية' : 'Educational Story') },
+    { id: 'adventure' as const, emoji: '🗺️', color: 'from-orange-400 to-amber-500', label: isAr ? 'مغامرة' : 'Adventure' },
+    { id: 'bedtime' as const, emoji: '🌙', color: 'from-indigo-400 to-purple-600', label: isAr ? 'قبل النوم' : 'Bedtime' },
+    { id: 'educational' as const, emoji: '🎓', color: 'from-emerald-400 to-teal-600', label: isAr ? 'تعليمية' : 'Educational' },
+    { id: 'fantasy' as const, emoji: '✨', color: 'from-fuchsia-400 to-pink-600', label: isAr ? 'خيالية' : 'Fantasy' },
+    { id: 'friendship' as const, emoji: '🤝', color: 'from-rose-400 to-red-500', label: isAr ? 'صداقة' : 'Friendship' },
   ]
 
+  // معالجة رفع الصورة
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // التحقق من النوع والحجم
+    if (!file.type.startsWith('image/')) {
+      setError(isAr ? 'الرجاء اختيار صورة' : 'Please select an image')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) { // 5MB
+      setError(isAr ? 'حجم الصورة يجب أن يكون أقل من 5 ميجابايت' : 'Image must be less than 5MB')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const result = event.target?.result as string
+      setReferenceImage(result)
+      setImagePreview(result)
+      setError('')
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleRemoveImage = () => {
+    setReferenceImage(null)
+    setImagePreview(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
   const handleGenerate = async () => {
-    if (!childName || !childAge || !hobbies) return
+    if (!childName || !storyIdea || !referenceImage) return
     setGenerating(true)
     setError('')
     setStory('')
+    setGeneratedStory(null)
+    setCurrentStoryPage(0)
+
+    try {
+      setGenerationStep(isAr ? 'يكتب كوبيستو القصة...' : 'Kopisto is writing the story...')
+
+      const res = await fetch('/api/generate-story-images', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          childName,
+          childAge,
+          storyIdea,
+          storyType,
+          referenceImage,
+          language: isAr ? 'ar' : 'en',
+        }),
+      })
+      const data = await res.json()
+
+      if (data.error) {
+        setError(pc.errorGenerate)
+      } else if (data.pages) {
+        setGenerationStep(isAr ? 'يرسم كوبيستو الصور...' : 'Kopisto is drawing pictures...')
+        setGeneratedStory(data)
+        setStoryHistory(prev => [{
+          title: data.title || (isAr ? 'قصة جديدة' : 'New Story'),
+          date: new Date().toLocaleDateString(isAr ? 'ar-SA' : 'en-US')
+        }, ...prev.slice(0, 4)])
+      }
+    } catch {
+      setError(pc.errorGenerate)
+    } finally {
+      setGenerating(false)
+      setGenerationStep('')
+    }
+  }
+
+  // طريقة قديمة للنص فقط (fallback)
+  const handleGenerateTextOnly = async () => {
+    if (!childName || !childAge || !storyIdea) return
+    setGenerating(true)
+    setError('')
 
     try {
       const res = await fetch('/api/generate-story', {
@@ -421,7 +513,7 @@ function StoryCreatorSection() {
         body: JSON.stringify({
           childName,
           childAge,
-          hobbies,
+          hobbies: storyIdea,
           storyType,
           language: isAr ? 'ar' : 'en',
         }),
@@ -431,7 +523,6 @@ function StoryCreatorSection() {
         setError(pc.errorGenerate)
       } else {
         setStory(data.story)
-        setStoryHistory(prev => [{ title: data.story.split('\n')[0]?.substring(0, 50) || (isAr ? 'قصة جديدة' : 'New Story'), date: new Date().toLocaleDateString(isAr ? 'ar-SA' : 'en-US') }, ...prev.slice(0, 4)])
       }
     } catch {
       setError(pc.errorGenerate)
@@ -441,7 +532,10 @@ function StoryCreatorSection() {
   }
 
   const handleDownloadPdf = () => {
-    const blob = new Blob([story], { type: 'text/plain;charset=utf-8' })
+    const content = generatedStory
+      ? `${generatedStory.title}\n\n${generatedStory.pages.map(p => isAr ? p.textAr : p.textEn).join('\n\n')}`
+      : story
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -467,30 +561,98 @@ function StoryCreatorSection() {
           </div>
         </div>
 
+        {/* رفع صورة الطفل - المرجع للشخصية */}
+        <div className="mb-6">
+          <label className="block text-sm font-semibold text-sky-800 mb-3 flex items-center gap-2">
+            <Camera className="w-4 h-4 text-orange-500" />
+            {isAr ? '📷 صورة طفلك (سيكون بطل القصة!)' : "📷 Your child's photo (will be the hero!)"}
+          </label>
+
+          {!imagePreview ? (
+            <motion.div
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-orange-300 rounded-2xl p-8 text-center cursor-pointer hover:bg-orange-50 transition-colors"
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+            >
+              <motion.div
+                className="text-5xl mb-3"
+                animate={{ y: [0, -5, 0] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                📸
+              </motion.div>
+              <p className="text-sky-700 font-semibold mb-1">
+                {isAr ? 'اضغط لرفع صورة طفلك' : 'Click to upload your child\'s photo'}
+              </p>
+              <p className="text-sky-400 text-xs">
+                {isAr ? '(JPG, PNG - حد أقصى 5 ميجابايت)' : '(JPG, PNG - Max 5MB)'}
+              </p>
+            </motion.div>
+          ) : (
+            <div className="relative rounded-2xl overflow-hidden border-2 border-orange-200 shadow-md">
+              <div className="relative w-full h-48">
+                <img
+                  src={imagePreview}
+                  alt={isAr ? 'صورة الطفل' : 'Child photo'}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" />
+                  {isAr ? 'الصورة جاهزة' : 'Photo ready'}
+                </div>
+                <button
+                  onClick={handleRemoveImage}
+                  className="absolute top-2 left-2 w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="p-3 bg-gradient-to-r from-orange-50 to-amber-50">
+                <p className="text-xs text-orange-700 font-semibold flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" />
+                  {isAr
+                    ? '🌟 طفلك سيكون بطل القصة!'
+                    : '🌟 Your child will be the story hero!'}
+                </p>
+              </div>
+            </div>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="hidden"
+          />
+        </div>
+
         {/* Story Type Selection */}
         <div className="mb-6">
-          <label className="block text-sm font-semibold text-sky-800 mb-3">{pc.storyType || (isAr ? 'نوع القصة' : 'Story Type')}</label>
-          <div className="grid grid-cols-3 gap-3">
+          <label className="block text-sm font-semibold text-sky-800 mb-3">
+            {pc.storyType || (isAr ? 'نوع القصة' : 'Story Type')}
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
             {storyTypes.map((type) => (
               <motion.button
                 key={type.id}
                 onClick={() => setStoryType(type.id)}
-                className={`p-4 rounded-2xl text-center transition-all border-2 ${
+                className={`p-3 rounded-2xl text-center transition-all border-2 ${
                   storyType === type.id
                     ? `bg-gradient-to-br ${type.color} text-white border-transparent shadow-lg`
                     : 'bg-white border-sky-100 text-sky-700 hover:border-sky-300'
                 }`}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
-                <span className="text-3xl block mb-2">{type.emoji}</span>
+                <span className="text-2xl block mb-1">{type.emoji}</span>
                 <span className="text-xs font-bold">{type.label}</span>
               </motion.button>
             ))}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div>
             <label className="block text-sm font-semibold text-sky-800 mb-2">{pc.childName}</label>
             <input
@@ -511,45 +673,68 @@ function StoryCreatorSection() {
               className="w-full px-4 py-3 rounded-xl border border-sky-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all text-sky-900 placeholder:text-sky-300"
             />
           </div>
-          <div>
-            <label className="block text-sm font-semibold text-sky-800 mb-2">{pc.hobbies}</label>
-            <input
-              type="text"
-              value={hobbies}
-              onChange={(e) => setHobbies(e.target.value)}
-              placeholder={pc.hobbiesPlaceholder}
-              className="w-full px-4 py-3 rounded-xl border border-sky-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all text-sky-900 placeholder:text-sky-300"
-            />
-          </div>
         </div>
 
-        <motion.button
-          onClick={handleGenerate}
-          disabled={generating || !childName || !childAge || !hobbies}
-          className={`w-full py-4 rounded-xl font-bold text-white shadow-lg flex items-center justify-center gap-2 transition-all text-lg ${
-            generating || !childName || !childAge || !hobbies
-              ? 'bg-gray-300 cursor-not-allowed'
-              : 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 hover:shadow-xl'
-          }`}
-          whileHover={!generating && childName && childAge && hobbies ? { scale: 1.02 } : {}}
-          whileTap={!generating && childName && childAge && hobbies ? { scale: 0.98 } : {}}
-        >
-          {generating ? (
-            <>
-              <motion.div
-                className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-              />
-              {pc.generating}
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-6 h-6" />
-              {pc.generate}
-            </>
-          )}
-        </motion.button>
+        {/* فكرة القصة */}
+        <div className="mb-6">
+          <label className="block text-sm font-semibold text-sky-800 mb-2">
+            {isAr ? '💭 فكرة القصة' : '💭 Story Idea'}
+          </label>
+          <textarea
+            value={storyIdea}
+            onChange={(e) => setStoryIdea(e.target.value)}
+            placeholder={isAr
+              ? 'مثال: ذهب طفلي في رحلة إلى الفضاء واكتشف كوكباً جديداً...'
+              : 'e.g., My child went on a space journey and discovered a new planet...'
+            }
+            rows={3}
+            className="w-full px-4 py-3 rounded-xl border border-sky-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all text-sky-900 placeholder:text-sky-300 resize-none"
+          />
+        </div>
+
+        {/* أزرار الإنشاء */}
+        <div className="space-y-3">
+          <motion.button
+            onClick={handleGenerate}
+            disabled={generating || !childName || !storyIdea || !referenceImage}
+            className={`w-full py-4 rounded-xl font-bold text-white shadow-lg flex items-center justify-center gap-2 transition-all text-lg ${
+              generating || !childName || !storyIdea || !referenceImage
+                ? 'bg-gray-300 cursor-not-allowed'
+                : 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 hover:shadow-xl'
+            }`}
+            whileHover={!generating && childName && storyIdea && referenceImage ? { scale: 1.02 } : {}}
+            whileTap={!generating && childName && storyIdea && referenceImage ? { scale: 0.98 } : {}}
+          >
+            {generating ? (
+              <>
+                <motion.div
+                  className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                />
+                {generationStep || pc.generating}
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-6 h-6" />
+                {isAr ? '✨ أنشئ قصة مصورة بطفلي!' : '✨ Create illustrated story!'}
+              </>
+            )}
+          </motion.button>
+
+          {/* زر بديل: قصة نصية فقط */}
+          <button
+            onClick={handleGenerateTextOnly}
+            disabled={generating || !childName || !childAge || !storyIdea}
+            className={`w-full py-2.5 rounded-xl font-semibold text-sm transition-all ${
+              generating || !childName || !childAge || !storyIdea
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-sky-50 text-sky-600 hover:bg-sky-100 border border-sky-200'
+            }`}
+          >
+            {isAr ? '📝 أو أنشئ قصة نصية فقط (بدون صورة)' : '📝 Or text-only story (no photo)'}
+          </button>
+        </div>
 
         {error && (
           <motion.div
@@ -562,8 +747,140 @@ function StoryCreatorSection() {
         )}
       </motion.div>
 
-      {/* Story Result */}
-      {story && (
+      {/* القصة المصورة الناتجة */}
+      {generatedStory && (
+        <motion.div
+          className="bg-white rounded-3xl p-6 md:p-8 border-2 border-orange-200 shadow-lg"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <h4 className="text-lg font-bold text-sky-900 flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-orange-500" />
+              {generatedStory.title}
+            </h4>
+            <motion.button
+              onClick={handleDownloadPdf}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-sky-500 to-sky-600 text-white rounded-xl font-semibold text-sm shadow-md"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Download className="w-4 h-4" />
+              {pc.downloadPdf}
+            </motion.button>
+          </div>
+
+          {/* عرض القصة ككتاب */}
+          <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-6 border border-orange-100 shadow-inner">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentStoryPage}
+                initial={{ opacity: 0, rotateY: isAr ? 15 : -15, x: 50 }}
+                animate={{ opacity: 1, rotateY: 0, x: 0 }}
+                exit={{ opacity: 0, rotateY: isAr ? -15 : 15, x: -50 }}
+                transition={{ duration: 0.5 }}
+              >
+                {/* صورة الصفحة */}
+                <div className="mb-4 flex justify-center">
+                  {generatedStory.pages[currentStoryPage]?.imageUrl ? (
+                    <div className="relative w-full max-w-md aspect-square rounded-2xl overflow-hidden shadow-lg">
+                      <img
+                        src={generatedStory.pages[currentStoryPage].imageUrl!}
+                        alt={`Page ${currentStoryPage + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-full max-w-md aspect-square rounded-2xl bg-gradient-to-br from-orange-200 via-amber-200 to-yellow-200 flex items-center justify-center shadow-lg relative overflow-hidden">
+                      {/* placeholder ملون عند عدم توفر صورة */}
+                      <div className="absolute inset-0 opacity-30" style={{
+                        backgroundImage: 'radial-gradient(circle at 20% 80%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)',
+                        backgroundSize: '30px 30px',
+                      }} />
+                      <div className="text-center relative z-10">
+                        <motion.div
+                          className="text-8xl mb-2"
+                          animate={{ scale: [1, 1.1, 1] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        >
+                          {['🌟', '🎨', '✨', '📚'][currentStoryPage % 4]}
+                        </motion.div>
+                        <p className="text-orange-700 text-sm font-semibold px-4">
+                          {isAr ? '🖼️ صورة القصة' : '🖼️ Story illustration'}
+                        </p>
+                        <p className="text-orange-600 text-xs mt-1 px-4">
+                          {isAr ? 'سيتم تفعيلها مع KIE.AI' : 'Will be enabled with KIE.AI'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* نص الصفحة */}
+                <div className="text-center">
+                  <p className="text-sky-900 leading-loose text-base md:text-lg font-medium" dir={isAr ? 'rtl' : 'ltr'}>
+                    {isAr
+                      ? generatedStory.pages[currentStoryPage]?.textAr
+                      : generatedStory.pages[currentStoryPage]?.textEn
+                    }
+                  </p>
+                </div>
+
+                {/* رقم الصفحة */}
+                <div className="text-center mt-4 text-orange-500 text-sm font-semibold">
+                  {currentStoryPage + 1} / {generatedStory.pages.length}
+                </div>
+              </motion.div>
+            </AnimatePresence>
+
+            {/* أزرار التنقل */}
+            <div className="flex items-center justify-between mt-6">
+              <motion.button
+                onClick={() => setCurrentStoryPage(p => Math.max(0, p - 1))}
+                disabled={currentStoryPage === 0}
+                className={`px-4 py-2 rounded-xl font-semibold text-sm transition-all ${
+                  currentStoryPage === 0
+                    ? 'bg-gray-100 text-gray-400'
+                    : 'bg-white text-orange-600 hover:bg-orange-100 shadow-sm'
+                }`}
+                whileHover={currentStoryPage !== 0 ? { scale: 1.05 } : {}}
+              >
+                {isAr ? '→ السابق' : '← Previous'}
+              </motion.button>
+
+              <div className="flex gap-1.5">
+                {generatedStory.pages.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentStoryPage(i)}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      i === currentStoryPage
+                        ? 'w-6 bg-orange-500'
+                        : 'bg-orange-200 hover:bg-orange-300'
+                    }`}
+                  />
+                ))}
+              </div>
+
+              <motion.button
+                onClick={() => setCurrentStoryPage(p => Math.min(generatedStory.pages.length - 1, p + 1))}
+                disabled={currentStoryPage === generatedStory.pages.length - 1}
+                className={`px-4 py-2 rounded-xl font-semibold text-sm transition-all ${
+                  currentStoryPage === generatedStory.pages.length - 1
+                    ? 'bg-gray-100 text-gray-400'
+                    : 'bg-white text-orange-600 hover:bg-orange-100 shadow-sm'
+                }`}
+                whileHover={currentStoryPage !== generatedStory.pages.length - 1 ? { scale: 1.05 } : {}}
+              >
+                {isAr ? 'التالي ←' : 'Next →'}
+              </motion.button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* نتيجة القصة النصية فقط */}
+      {story && !generatedStory && (
         <motion.div
           className="bg-white rounded-3xl p-6 md:p-8 border-2 border-orange-200 shadow-lg"
           initial={{ opacity: 0, y: 20 }}
@@ -574,17 +891,15 @@ function StoryCreatorSection() {
               <BookOpen className="w-5 h-5 text-orange-500" />
               {pc.storyResult}
             </h4>
-            <div className="flex items-center gap-2">
-              <motion.button
-                onClick={handleDownloadPdf}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-sky-500 to-sky-600 text-white rounded-xl font-semibold text-sm shadow-md"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Download className="w-4 h-4" />
-                {pc.downloadPdf}
-              </motion.button>
-            </div>
+            <motion.button
+              onClick={handleDownloadPdf}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-sky-500 to-sky-600 text-white rounded-xl font-semibold text-sm shadow-md"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Download className="w-4 h-4" />
+              {pc.downloadPdf}
+            </motion.button>
           </div>
           <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-6 border border-orange-100 max-h-[500px] overflow-y-auto shadow-inner">
             <div className="text-sky-900 leading-loose whitespace-pre-wrap text-sm md:text-base" dir={isAr ? 'rtl' : 'ltr'}>
@@ -615,6 +930,30 @@ function StoryCreatorSection() {
           </div>
         </motion.div>
       )}
+
+      {/* معلومات KIE.AI */}
+      <motion.div
+        className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-2xl p-5 border border-violet-100"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+      >
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-400 to-purple-600 flex items-center justify-center text-white shrink-0">
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="font-bold text-violet-900 mb-1 text-sm">
+              {isAr ? '🚀 ميزة الصور الذكية (قريباً)' : '🚀 AI Image Feature (Coming Soon)'}
+            </h4>
+            <p className="text-violet-700 text-xs leading-relaxed">
+              {isAr
+                ? 'سيتم تفعيل توليد صور حقيقية لطفلك داخل القصة باستخدام KIE.AI API (GPT-IMAGE-1 / Nano Banana). سيرى طفلك نفسه بطلاً للقصة برسوم كرتونية جميلة!'
+                : 'Real image generation of your child inside the story will be enabled using KIE.AI API (GPT-IMAGE-1 / Nano Banana). Your child will see themselves as the story hero with beautiful cartoon illustrations!'}
+            </p>
+          </div>
+        </div>
+      </motion.div>
     </div>
   )
 }

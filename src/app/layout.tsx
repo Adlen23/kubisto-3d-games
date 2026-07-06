@@ -3,6 +3,7 @@ import { Fredoka } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { LanguageProvider } from "@/context/LanguageContext";
+import { KopistoChatbot } from "@/components/kopisto/KopistoChatbot";
 
 const fredoka = Fredoka({
   variable: "--font-fredoka",
@@ -39,6 +40,7 @@ export default function RootLayout({
       >
         <LanguageProvider>
           {children}
+          <KopistoChatbot />
         </LanguageProvider>
         <Toaster />
       </body>
