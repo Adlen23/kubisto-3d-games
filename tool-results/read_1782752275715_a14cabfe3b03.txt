@@ -1,0 +1,1582 @@
+     1→'use client'
+     2→
+     3→import { useState, useRef, useEffect, useCallback } from 'react'
+     4→import { motion, AnimatePresence } from 'framer-motion'
+     5→import { useLanguage } from '@/context/LanguageContext'
+     6→import {
+     7→  BarChart3, BookOpen, Video, Lightbulb, Award,
+     8→  MessageCircle, TrendingUp, ShoppingBag, Camera,
+     9→  Sparkles, Send, Download, Upload, Play, Star,
+    10→  ChevronDown, Clock, BookMarked, Palette, Rocket,
+    11→  Calculator, Heart, Brain, Eye, Users, Lock,
+    12→  Trophy, Target, Zap, Feather, Baby, GraduationCap,
+    13→  Shield, Moon, Globe, Music, TreePine, Fish,
+    14→  Gift, Stamp, Crown, FileText, Image as ImageIcon,
+    15→  CheckCircle2, X, Plus, ChevronLeft, ChevronRight
+    16→} from 'lucide-react'
+    17→import Image from 'next/image'
+    18→
+    19→// ========================
+    20→// Types
+    21→// ========================
+    22→type TabId = 'progress' | 'storyCreator' | 'videos' | 'tips' | 'certificates' | 'assistant' | 'weeklyReport' | 'store' | 'memoryBox'
+    23→
+    24→interface ChatMessage {
+    25→  role: 'user' | 'assistant'
+    26→  content: string
+    27→}
+    28→
+    29→interface MemoryItem {
+    30→  id: string
+    31→  type: 'photo' | 'drawing' | 'achievement'
+    32→  url: string
+    33→  caption: string
+    34→  date: string
+    35→}
+    36→
+    37→// ========================
+    38→// Tab Configuration
+    39→// ========================
+    40→const tabConfig: Array<{ id: TabId; icon: React.ReactNode; color: string; emoji: string }> = [
+    41→  { id: 'progress', icon: <BarChart3 className="w-5 h-5" />, color: 'from-sky-400 to-sky-600', emoji: '📊' },
+    42→  { id: 'storyCreator', icon: <BookOpen className="w-5 h-5" />, color: 'from-orange-400 to-amber-500', emoji: '📖' },
+    43→  { id: 'videos', icon: <Video className="w-5 h-5" />, color: 'from-rose-400 to-pink-600', emoji: '🎬' },
+    44→  { id: 'tips', icon: <Lightbulb className="w-5 h-5" />, color: 'from-yellow-400 to-amber-500', emoji: '💡' },
+    45→  { id: 'certificates', icon: <Award className="w-5 h-5" />, color: 'from-emerald-400 to-teal-600', emoji: '🏆' },
+    46→  { id: 'assistant', icon: <MessageCircle className="w-5 h-5" />, color: 'from-violet-400 to-purple-600', emoji: '🤖' },
+    47→  { id: 'weeklyReport', icon: <TrendingUp className="w-5 h-5" />, color: 'from-cyan-400 to-sky-600', emoji: '📈' },
+    48→  { id: 'store', icon: <ShoppingBag className="w-5 h-5" />, color: 'from-orange-400 to-red-500', emoji: '🛒' },
+    49→  { id: 'memoryBox', icon: <Camera className="w-5 h-5" />, color: 'from-pink-400 to-rose-600', emoji: '📸' },
+    50→]
+    51→
+    52→// ========================
+    53→// Mock Data
+    54→// ========================
+    55→const mockProgress = {
+    56→  gamesCompleted: 12,
+    57→  skillsLearned: 8,
+    58→  readingLevel: 'advanced' as const,
+    59→  mathLevel: 'intermediate' as const,
+    60→  storiesRead: 7,
+    61→  newWords: 15,
+    62→  tasksThisWeek: 12,
+    63→  badge: 'explorerBadge',
+    64→  totalStars: 47,
+    65→  level: 5,
+    66→  scienceLevel: 'advanced' as const,
+    67→  artLevel: 'intermediate' as const,
+    68→}
+    69→
+    70→const mockWeeklyData = [
+    71→  { day: 'sat', minutes: 15, games: 2 },
+    72→  { day: 'sun', minutes: 25, games: 3 },
+    73→  { day: 'mon', minutes: 10, games: 1 },
+    74→  { day: 'tue', minutes: 30, games: 4 },
+    75→  { day: 'wed', minutes: 20, games: 2 },
+    76→  { day: 'thu', minutes: 35, games: 5 },
+    77→  { day: 'fri', minutes: 18, games: 2 },
+    78→]
+    79→
+    80→const mockActivities = [
+    81→  { type: 'game', title: 'عدّاء كوبيستو', time: 'منذ 2 ساعة', stars: 3, icon: '🎮' },
+    82→  { type: 'story', title: 'مغامرة في الفضاء', time: 'منذ 5 ساعات', stars: 5, icon: '📖' },
+    83→  { type: 'badge', title: 'شارة مستكشف العلوم', time: 'أمس', stars: 0, icon: '🏅' },
+    84→  { type: 'game', title: 'تحدي الرياضيات', time: 'أمس', stars: 4, icon: '🎮' },
+    85→  { type: 'word', title: 'تعلم 5 كلمات جديدة', time: 'منذ يومين', stars: 2, icon: '📝' },
+    86→]
+    87→
+    88→const mockSkillRadar = [
+    89→  { skill: 'math', value: 75 },
+    90→  { skill: 'reading', value: 85 },
+    91→  { skill: 'science', value: 90 },
+    92→  { skill: 'art', value: 65 },
+    93→  { skill: 'logic', value: 70 },
+    94→  { skill: 'memory', value: 80 },
+    95→]
+    96→
+    97→// ========================
+    98→// Main Component
+    99→// ========================
+   100→export default function ParentCorner() {
+   101→  const { t, isAr } = useLanguage()
+   102→  const pc = t.parentCorner
+   103→  const [activeTab, setActiveTab] = useState<TabId>('progress')
+   104→  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+   105→
+   106→  return (
+   107→    <section className="py-8 md:py-12 bg-gradient-to-b from-sky-50 via-white to-sky-50/30 relative overflow-hidden">
+   108→      {/* Decorative background */}
+   109→      <div className="absolute inset-0 pointer-events-none">
+   110→        <div className="absolute top-10 left-[20%] text-4xl opacity-10 animate-float-slow">👨‍👩‍👧‍👦</div>
+   111→        <div className="absolute top-20 right-[15%] text-3xl opacity-10 animate-float-slow" style={{ animationDelay: '1s' }}>🌟</div>
+   112→        <div className="absolute bottom-20 left-[10%] text-3xl opacity-10 animate-float-slow" style={{ animationDelay: '2s' }}>📚</div>
+   113→        <div className="absolute top-40 right-[30%] text-2xl opacity-10 animate-float-slow" style={{ animationDelay: '3s' }}>🎯</div>
+   114→        <div className="absolute bottom-40 right-[20%] text-2xl opacity-10 animate-float-slow" style={{ animationDelay: '1.5s' }}>✨</div>
+   115→      </div>
+   116→
+   117→      <div className="max-w-6xl mx-auto px-4 sm:px-6 relative z-10">
+   118→        {/* Header */}
+   119→        <motion.div
+   120→          className="text-center mb-8"
+   121→          initial={{ opacity: 0, y: 30 }}
+   122→          animate={{ opacity: 1, y: 0 }}
+   123→        >
+   124→          <motion.div
+   125→            className="inline-flex items-center gap-3 bg-gradient-to-r from-sky-500 to-sky-600 text-white px-6 py-3 rounded-2xl shadow-lg shadow-sky-200 mb-4"
+   126→            animate={{ scale: [1, 1.02, 1] }}
+   127→            transition={{ duration: 3, repeat: Infinity }}
+   128→          >
+   129→            <span className="text-2xl">🏡</span>
+   130→            <h1 className="text-2xl md:text-3xl font-bold">
+   131→              {pc.title}{' '}
+   132→              <span className="bg-gradient-to-r from-amber-300 to-orange-300 bg-clip-text text-transparent">
+   133→                {pc.titleHighlight}
+   134→              </span>
+   135→            </h1>
+   136→          </motion.div>
+   137→          <p className="text-sky-600/70 text-lg max-w-2xl mx-auto">
+   138→            {pc.subtitle}
+   139→          </p>
+   140→        </motion.div>
+   141→
+   142→        {/* Tab Navigation - Desktop */}
+   143→        <div className="hidden lg:block mb-8">
+   144→          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-2 shadow-lg border border-sky-100">
+   145→            <div className="flex flex-wrap justify-center gap-1.5">
+   146→              {tabConfig.map((tab) => (
+   147→                <motion.button
+   148→                  key={tab.id}
+   149→                  onClick={() => setActiveTab(tab.id)}
+   150→                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+   151→                    activeTab === tab.id
+   152→                      ? `bg-gradient-to-r ${tab.color} text-white shadow-lg`
+   153→                      : 'text-sky-700 hover:bg-sky-50'
+   154→                  }`}
+   155→                  whileHover={{ scale: activeTab === tab.id ? 1 : 1.02 }}
+   156→                  whileTap={{ scale: 0.97 }}
+   157→                >
+   158→                  <span className="text-base">{tab.emoji}</span>
+   159→                  {pc.tabs[tab.id]}
+   160→                </motion.button>
+   161→              ))}
+   162→            </div>
+   163→          </div>
+   164→        </div>
+   165→
+   166→        {/* Tab Navigation - Mobile */}
+   167→        <div className="lg:hidden mb-6">
+   168→          <button
+   169→            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+   170→            className="w-full flex items-center justify-between px-4 py-3 bg-white rounded-xl border border-sky-100 shadow-sm"
+   171→          >
+   172→            <div className="flex items-center gap-2">
+   173→              <span className="text-xl">{tabConfig.find(t => t.id === activeTab)?.emoji}</span>
+   174→              <span className="font-semibold text-sky-700">{pc.tabs[activeTab]}</span>
+   175→            </div>
+   176→            <ChevronDown className={`w-4 h-4 text-sky-400 transition-transform ${mobileMenuOpen ? 'rotate-180' : ''}`} />
+   177→          </button>
+   178→          <AnimatePresence>
+   179→            {mobileMenuOpen && (
+   180→              <motion.div
+   181→                initial={{ opacity: 0, height: 0 }}
+   182→                animate={{ opacity: 1, height: 'auto' }}
+   183→                exit={{ opacity: 0, height: 0 }}
+   184→                className="overflow-hidden mt-2 bg-white rounded-xl border border-sky-100 shadow-lg z-50"
+   185→              >
+   186→                <div className="p-2 grid grid-cols-3 gap-1">
+   187→                  {tabConfig.map((tab) => (
+   188→                    <button
+   189→                      key={tab.id}
+   190→                      onClick={() => { setActiveTab(tab.id); setMobileMenuOpen(false) }}
+   191→                      className={`flex flex-col items-center gap-1 px-2 py-2.5 rounded-lg text-xs font-semibold transition-all ${
+   192→                        activeTab === tab.id
+   193→                          ? `bg-gradient-to-r ${tab.color} text-white`
+   194→                          : 'text-sky-700 hover:bg-sky-50'
+   195→                      }`}
+   196→                    >
+   197→                      <span className="text-lg">{tab.emoji}</span>
+   198→                      {pc.tabs[tab.id]}
+   199→                    </button>
+   200→                  ))}
+   201→                </div>
+   202→              </motion.div>
+   203→            )}
+   204→          </AnimatePresence>
+   205→        </div>
+   206→
+   207→        {/* Content Area */}
+   208→        <AnimatePresence mode="wait">
+   209→          <motion.div
+   210→            key={activeTab}
+   211→            initial={{ opacity: 0, y: 20 }}
+   212→            animate={{ opacity: 1, y: 0 }}
+   213→            exit={{ opacity: 0, y: -20 }}
+   214→            transition={{ duration: 0.3 }}
+   215→          >
+   216→            {activeTab === 'progress' && <ProgressSection />}
+   217→            {activeTab === 'storyCreator' && <StoryCreatorSection />}
+   218→            {activeTab === 'videos' && <VideosSection />}
+   219→            {activeTab === 'tips' && <TipsSection />}
+   220→            {activeTab === 'certificates' && <CertificatesSection />}
+   221→            {activeTab === 'assistant' && <AssistantSection />}
+   222→            {activeTab === 'weeklyReport' && <WeeklyReportSection />}
+   223→            {activeTab === 'store' && <StoreSection />}
+   224→            {activeTab === 'memoryBox' && <MemoryBoxSection />}
+   225→          </motion.div>
+   226→        </AnimatePresence>
+   227→      </div>
+   228→    </section>
+   229→  )
+   230→}
+   231→
+   232→// ========================
+   233→// 1. Progress Section (Enhanced)
+   234→// ========================
+   235→function ProgressSection() {
+   236→  const { t, isAr } = useLanguage()
+   237→  const pc = t.parentCorner.progress
+   238→
+   239→  const levelColor = (level: string) => {
+   240→    switch (level) {
+   241→      case 'advanced': return 'bg-emerald-100 text-emerald-700 border-emerald-200'
+   242→      case 'intermediate': return 'bg-amber-100 text-amber-700 border-amber-200'
+   243→      default: return 'bg-sky-100 text-sky-700 border-sky-200'
+   244→    }
+   245→  }
+   246→
+   247→  const levelLabel = (level: string) => {
+   248→    switch (level) {
+   249→      case 'advanced': return pc.advanced
+   250→      case 'intermediate': return pc.intermediate
+   251→      default: return pc.beginner
+   252→    }
+   253→  }
+   254→
+   255→  const levelPercent = (level: string) => {
+   256→    switch (level) {
+   257→      case 'advanced': return 85
+   258→      case 'intermediate': return 60
+   259→      default: return 30
+   260→    }
+   261→  }
+   262→
+   263→  const stats = [
+   264→    { icon: <Rocket className="w-6 h-6" />, value: mockProgress.gamesCompleted, label: pc.gamesCompleted, color: 'from-sky-400 to-sky-600', bg: 'bg-sky-50' },
+   265→    { icon: <Star className="w-6 h-6" />, value: mockProgress.skillsLearned, label: pc.skillsLearned, color: 'from-amber-400 to-amber-600', bg: 'bg-amber-50' },
+   266→    { icon: <BookOpen className="w-6 h-6" />, value: mockProgress.storiesRead, label: pc.storiesRead, color: 'from-emerald-400 to-emerald-600', bg: 'bg-emerald-50' },
+   267→    { icon: <Sparkles className="w-6 h-6" />, value: mockProgress.newWords, label: pc.newWords, color: 'from-violet-400 to-purple-600', bg: 'bg-violet-50' },
+   268→  ]
+   269→
+   270→  const levels = [
+   271→    { name: pc.readingLevel, level: mockProgress.readingLevel, icon: <BookMarked className="w-5 h-5" />, color: 'from-emerald-400 to-teal-600', percent: levelPercent(mockProgress.readingLevel) },
+   272→    { name: pc.mathLevel, level: mockProgress.mathLevel, icon: <Calculator className="w-5 h-5" />, color: 'from-sky-400 to-sky-600', percent: levelPercent(mockProgress.mathLevel) },
+   273→    { name: pc.scienceLevel || pc.readingLevel, level: mockProgress.scienceLevel, icon: <Globe className="w-5 h-5" />, color: 'from-emerald-400 to-teal-600', percent: levelPercent(mockProgress.scienceLevel) },
+   274→    { name: pc.artLevel || pc.mathLevel, level: mockProgress.artLevel, icon: <Palette className="w-5 h-5" />, color: 'from-pink-400 to-rose-600', percent: levelPercent(mockProgress.artLevel) },
+   275→  ]
+   276→
+   277→  return (
+   278→    <div className="space-y-6">
+   279→      {/* Child Profile Hero Card */}
+   280→      <motion.div
+   281→        className="bg-gradient-to-br from-sky-500 via-sky-600 to-indigo-600 rounded-3xl p-6 md:p-8 text-white relative overflow-hidden shadow-xl shadow-sky-200/50"
+   282→        initial={{ opacity: 0, y: 20 }}
+   283→        animate={{ opacity: 1, y: 0 }}
+   284→      >
+   285→        <div className="absolute -top-20 -right-20 w-60 h-60 bg-white/5 rounded-full" />
+   286→        <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-white/5 rounded-full" />
+   287→        <div className="absolute top-4 right-4 text-6xl opacity-10">🚀</div>
+   288→
+   289→        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-6">
+   290→          <div className="flex items-center gap-4">
+   291→            <div className="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center overflow-hidden border-2 border-white/30 shadow-lg">
+   292→              <Image src="/kopisto-idle-256.png" alt="Kopisto" width={80} height={80} className="w-full h-full object-contain" />
+   293→            </div>
+   294→            <div>
+   295→              <h3 className="text-2xl md:text-3xl font-bold">{isAr ? 'أحمد' : 'Ahmed'}</h3>
+   296→              <p className="text-white/80 text-sm mt-1">{pc.level} {mockProgress.level} • {mockProgress.totalStars} ⭐</p>
+   297→              <div className="flex items-center gap-2 mt-2 bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1.5 w-fit">
+   298→                <span className="text-lg">🏅</span>
+   299→                <span className="font-semibold text-sm">{pc.explorerBadge}</span>
+   300→              </div>
+   301→            </div>
+   302→          </div>
+   303→
+   304→          <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3 w-full md:w-auto">
+   305→            {stats.map((stat) => (
+   306→              <div key={stat.label} className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center border border-white/10">
+   307→                <div className="text-2xl font-bold">{stat.value}</div>
+   308→                <div className="text-white/70 text-xs mt-0.5">{stat.label}</div>
+   309→              </div>
+   310→            ))}
+   311→          </div>
+   312→        </div>
+   313→      </motion.div>
+   314→
+   315→      {/* Skill Levels Grid */}
+   316→      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   317→        {levels.map((item, i) => (
+   318→          <motion.div
+   319→            key={item.name}
+   320→            className="bg-white rounded-2xl p-5 border border-sky-100 shadow-sm hover:shadow-md transition-shadow"
+   321→            initial={{ opacity: 0, y: 20 }}
+   322→            animate={{ opacity: 1, y: 0 }}
+   323→            transition={{ delay: i * 0.1 }}
+   324→          >
+   325→            <div className="flex items-center justify-between mb-3">
+   326→              <div className="flex items-center gap-3">
+   327→                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center text-white shadow-md`}>
+   328→                  {item.icon}
+   329→                </div>
+   330→                <div>
+   331→                  <div className="font-bold text-sky-900">{item.name}</div>
+   332→                  <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full border ${levelColor(item.level)}`}>
+   333→                    {levelLabel(item.level)}
+   334→                  </span>
+   335→                </div>
+   336→              </div>
+   337→              <span className="text-sm font-bold text-sky-900">{item.percent}%</span>
+   338→            </div>
+   339→            <div className="bg-sky-50 rounded-full h-3 overflow-hidden">
+   340→              <motion.div
+   341→                className={`h-full rounded-full bg-gradient-to-r ${item.color}`}
+   342→                initial={{ width: 0 }}
+   343→                animate={{ width: `${item.percent}%` }}
+   344→                transition={{ duration: 1, delay: 0.3 + i * 0.1 }}
+   345→              />
+   346→            </div>
+   347→          </motion.div>
+   348→        ))}
+   349→      </div>
+   350→
+   351→      {/* Recent Activity */}
+   352→      <motion.div
+   353→        className="bg-white rounded-2xl p-5 border border-sky-100 shadow-sm"
+   354→        initial={{ opacity: 0, y: 20 }}
+   355→        animate={{ opacity: 1, y: 0 }}
+   356→        transition={{ delay: 0.3 }}
+   357→      >
+   358→        <h4 className="font-bold text-sky-900 mb-4 flex items-center gap-2">
+   359→          <Clock className="w-5 h-5 text-sky-500" />
+   360→          {pc.recentActivity || (isAr ? 'النشاط الأخير' : 'Recent Activity')}
+   361→        </h4>
+   362→        <div className="space-y-3">
+   363→          {mockActivities.map((activity, i) => (
+   364→            <motion.div
+   365→              key={i}
+   366→              className="flex items-center gap-3 p-3 rounded-xl bg-sky-50/50 hover:bg-sky-50 transition-colors"
+   367→              initial={{ opacity: 0, x: isAr ? 20 : -20 }}
+   368→              animate={{ opacity: 1, x: 0 }}
+   369→              transition={{ delay: 0.4 + i * 0.05 }}
+   370→            >
+   371→              <span className="text-2xl">{activity.icon}</span>
+   372→              <div className="flex-1 min-w-0">
+   373→                <p className="font-semibold text-sky-900 text-sm truncate">{activity.title}</p>
+   374→                <p className="text-sky-400 text-xs">{activity.time}</p>
+   375→              </div>
+   376→              {activity.stars > 0 && (
+   377→                <div className="flex items-center gap-1 text-amber-500">
+   378→                  <Star className="w-4 h-4 fill-amber-400" />
+   379→                  <span className="text-sm font-bold">{activity.stars}</span>
+   380→                </div>
+   381→              )}
+   382→            </motion.div>
+   383→          ))}
+   384→        </div>
+   385→      </motion.div>
+   386→    </div>
+   387→  )
+   388→}
+   389→
+   390→// ========================
+   391→// 2. Story Creator Section (Enhanced)
+   392→// ========================
+   393→function StoryCreatorSection() {
+   394→  const { t, isAr } = useLanguage()
+   395→  const pc = t.parentCorner.storyCreator
+   396→  const [childName, setChildName] = useState('')
+   397→  const [childAge, setChildAge] = useState('')
+   398→  const [hobbies, setHobbies] = useState('')
+   399→  const [storyType, setStoryType] = useState<'adventure' | 'bedtime' | 'educational'>('adventure')
+   400→  const [story, setStory] = useState('')
+   401→  const [generating, setGenerating] = useState(false)
+   402→  const [error, setError] = useState('')
+   403→  const [storyHistory, setStoryHistory] = useState<Array<{ title: string; date: string }>>([])
+   404→
+   405→  const storyTypes = [
+   406→    { id: 'adventure' as const, emoji: '🗺️', color: 'from-orange-400 to-amber-500', label: pc.adventureStory || (isAr ? 'قصة مغامرة' : 'Adventure Story') },
+   407→    { id: 'bedtime' as const, emoji: '🌙', color: 'from-indigo-400 to-purple-600', label: pc.bedtimeStory || (isAr ? 'قصة قبل النوم' : 'Bedtime Story') },
+   408→    { id: 'educational' as const, emoji: '🎓', color: 'from-emerald-400 to-teal-600', label: pc.educationalStory || (isAr ? 'قصة تعليمية' : 'Educational Story') },
+   409→  ]
+   410→
+   411→  const handleGenerate = async () => {
+   412→    if (!childName || !childAge || !hobbies) return
+   413→    setGenerating(true)
+   414→    setError('')
+   415→    setStory('')
+   416→
+   417→    try {
+   418→      const res = await fetch('/api/generate-story', {
+   419→        method: 'POST',
+   420→        headers: { 'Content-Type': 'application/json' },
+   421→        body: JSON.stringify({
+   422→          childName,
+   423→          childAge,
+   424→          hobbies,
+   425→          storyType,
+   426→          language: isAr ? 'ar' : 'en',
+   427→        }),
+   428→      })
+   429→      const data = await res.json()
+   430→      if (data.error) {
+   431→        setError(pc.errorGenerate)
+   432→      } else {
+   433→        setStory(data.story)
+   434→        setStoryHistory(prev => [{ title: data.story.split('\n')[0]?.substring(0, 50) || (isAr ? 'قصة جديدة' : 'New Story'), date: new Date().toLocaleDateString(isAr ? 'ar-SA' : 'en-US') }, ...prev.slice(0, 4)])
+   435→      }
+   436→    } catch {
+   437→      setError(pc.errorGenerate)
+   438→    } finally {
+   439→      setGenerating(false)
+   440→    }
+   441→  }
+   442→
+   443→  const handleDownloadPdf = () => {
+   444→    const blob = new Blob([story], { type: 'text/plain;charset=utf-8' })
+   445→    const url = URL.createObjectURL(blob)
+   446→    const a = document.createElement('a')
+   447→    a.href = url
+   448→    a.download = `${childName || 'kopisto'}-story.txt`
+   449→    a.click()
+   450→    URL.revokeObjectURL(url)
+   451→  }
+   452→
+   453→  return (
+   454→    <div className="space-y-6">
+   455→      <motion.div
+   456→        className="bg-white rounded-3xl p-6 md:p-8 border border-sky-100 shadow-lg"
+   457→        initial={{ opacity: 0, y: 20 }}
+   458→        animate={{ opacity: 1, y: 0 }}
+   459→      >
+   460→        <div className="flex items-center gap-3 mb-6">
+   461→          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white shadow-lg">
+   462→            <BookOpen className="w-7 h-7" />
+   463→          </div>
+   464→          <div>
+   465→            <h3 className="text-xl font-bold text-sky-900">{pc.title}</h3>
+   466→            <p className="text-sky-500/70 text-sm">{pc.subtitle}</p>
+   467→          </div>
+   468→        </div>
+   469→
+   470→        {/* Story Type Selection */}
+   471→        <div className="mb-6">
+   472→          <label className="block text-sm font-semibold text-sky-800 mb-3">{pc.storyType || (isAr ? 'نوع القصة' : 'Story Type')}</label>
+   473→          <div className="grid grid-cols-3 gap-3">
+   474→            {storyTypes.map((type) => (
+   475→              <motion.button
+   476→                key={type.id}
+   477→                onClick={() => setStoryType(type.id)}
+   478→                className={`p-4 rounded-2xl text-center transition-all border-2 ${
+   479→                  storyType === type.id
+   480→                    ? `bg-gradient-to-br ${type.color} text-white border-transparent shadow-lg`
+   481→                    : 'bg-white border-sky-100 text-sky-700 hover:border-sky-300'
+   482→                }`}
+   483→                whileHover={{ scale: 1.02 }}
+   484→                whileTap={{ scale: 0.98 }}
+   485→              >
+   486→                <span className="text-3xl block mb-2">{type.emoji}</span>
+   487→                <span className="text-xs font-bold">{type.label}</span>
+   488→              </motion.button>
+   489→            ))}
+   490→          </div>
+   491→        </div>
+   492→
+   493→        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+   494→          <div>
+   495→            <label className="block text-sm font-semibold text-sky-800 mb-2">{pc.childName}</label>
+   496→            <input
+   497→              type="text"
+   498→              value={childName}
+   499→              onChange={(e) => setChildName(e.target.value)}
+   500→              placeholder={pc.childNamePlaceholder}
+   501→              className="w-full px-4 py-3 rounded-xl border border-sky-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all text-sky-900 placeholder:text-sky-300"
+   502→            />
+   503→          </div>
+   504→          <div>
+   505→            <label className="block text-sm font-semibold text-sky-800 mb-2">{pc.childAge}</label>
+   506→            <input
+   507→              type="text"
+   508→              value={childAge}
+   509→              onChange={(e) => setChildAge(e.target.value)}
+   510→              placeholder={pc.childAgePlaceholder}
+   511→              className="w-full px-4 py-3 rounded-xl border border-sky-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all text-sky-900 placeholder:text-sky-300"
+   512→            />
+   513→          </div>
+   514→          <div>
+   515→            <label className="block text-sm font-semibold text-sky-800 mb-2">{pc.hobbies}</label>
+   516→            <input
+   517→              type="text"
+   518→              value={hobbies}
+   519→              onChange={(e) => setHobbies(e.target.value)}
+   520→              placeholder={pc.hobbiesPlaceholder}
+   521→              className="w-full px-4 py-3 rounded-xl border border-sky-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all text-sky-900 placeholder:text-sky-300"
+   522→            />
+   523→          </div>
+   524→        </div>
+   525→
+   526→        <motion.button
+   527→          onClick={handleGenerate}
+   528→          disabled={generating || !childName || !childAge || !hobbies}
+   529→          className={`w-full py-4 rounded-xl font-bold text-white shadow-lg flex items-center justify-center gap-2 transition-all text-lg ${
+   530→            generating || !childName || !childAge || !hobbies
+   531→              ? 'bg-gray-300 cursor-not-allowed'
+   532→              : 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 hover:shadow-xl'
+   533→          }`}
+   534→          whileHover={!generating && childName && childAge && hobbies ? { scale: 1.02 } : {}}
+   535→          whileTap={!generating && childName && childAge && hobbies ? { scale: 0.98 } : {}}
+   536→        >
+   537→          {generating ? (
+   538→            <>
+   539→              <motion.div
+   540→                className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full"
+   541→                animate={{ rotate: 360 }}
+   542→                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+   543→              />
+   544→              {pc.generating}
+   545→            </>
+   546→          ) : (
+   547→            <>
+   548→              <Sparkles className="w-6 h-6" />
+   549→              {pc.generate}
+   550→            </>
+   551→          )}
+   552→        </motion.button>
+   553→
+   554→        {error && (
+   555→          <motion.div
+   556→            className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm"
+   557→            initial={{ opacity: 0, y: 10 }}
+   558→            animate={{ opacity: 1, y: 0 }}
+   559→          >
+   560→            {error}
+   561→          </motion.div>
+   562→        )}
+   563→      </motion.div>
+   564→
+   565→      {/* Story Result */}
+   566→      {story && (
+   567→        <motion.div
+   568→          className="bg-white rounded-3xl p-6 md:p-8 border-2 border-orange-200 shadow-lg"
+   569→          initial={{ opacity: 0, y: 20 }}
+   570→          animate={{ opacity: 1, y: 0 }}
+   571→        >
+   572→          <div className="flex items-center justify-between mb-4">
+   573→            <h4 className="text-lg font-bold text-sky-900 flex items-center gap-2">
+   574→              <BookOpen className="w-5 h-5 text-orange-500" />
+   575→              {pc.storyResult}
+   576→            </h4>
+   577→            <div className="flex items-center gap-2">
+   578→              <motion.button
+   579→                onClick={handleDownloadPdf}
+   580→                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-sky-500 to-sky-600 text-white rounded-xl font-semibold text-sm shadow-md"
+   581→                whileHover={{ scale: 1.05 }}
+   582→                whileTap={{ scale: 0.95 }}
+   583→              >
+   584→                <Download className="w-4 h-4" />
+   585→                {pc.downloadPdf}
+   586→              </motion.button>
+   587→            </div>
+   588→          </div>
+   589→          <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-6 border border-orange-100 max-h-[500px] overflow-y-auto shadow-inner">
+   590→            <div className="text-sky-900 leading-loose whitespace-pre-wrap text-sm md:text-base" dir={isAr ? 'rtl' : 'ltr'}>
+   591→              {story}
+   592→            </div>
+   593→          </div>
+   594→        </motion.div>
+   595→      )}
+   596→
+   597→      {/* Story History */}
+   598→      {storyHistory.length > 0 && (
+   599→        <motion.div
+   600→          className="bg-white rounded-2xl p-5 border border-sky-100 shadow-sm"
+   601→          initial={{ opacity: 0 }}
+   602→          animate={{ opacity: 1 }}
+   603→        >
+   604→          <h4 className="font-bold text-sky-900 mb-3 flex items-center gap-2">
+   605→            <Clock className="w-4 h-4 text-sky-500" />
+   606→            {pc.storyHistory || (isAr ? 'القصص السابقة' : 'Story History')}
+   607→          </h4>
+   608→          <div className="space-y-2">
+   609→            {storyHistory.map((item, i) => (
+   610→              <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-sky-50/50 text-sm">
+   611→                <span className="font-medium text-sky-900 truncate">{item.title}</span>
+   612→                <span className="text-sky-400 text-xs">{item.date}</span>
+   613→              </div>
+   614→            ))}
+   615→          </div>
+   616→        </motion.div>
+   617→      )}
+   618→    </div>
+   619→  )
+   620→}
+   621→
+   622→// ========================
+   623→// 3. Videos Section (Enhanced)
+   624→// ========================
+   625→function VideosSection() {
+   626→  const { t, isAr } = useLanguage()
+   627→  const pc = t.parentCorner.videos
+   628→  const [uploadedImage, setUploadedImage] = useState<string | null>(null)
+   629→  const fileInputRef = useRef<HTMLInputElement>(null)
+   630→
+   631→  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+   632→    const file = e.target.files?.[0]
+   633→    if (file) {
+   634→      const reader = new FileReader()
+   635→      reader.onloadend = () => {
+   636→        setUploadedImage(reader.result as string)
+   637→      }
+   638→      reader.readAsDataURL(file)
+   639→    }
+   640→  }
+   641→
+   642→  const videoTypes = [
+   643→    {
+   644→      title: pc.encouragement,
+   645→      desc: pc.encouragementDesc,
+   646→      color: 'from-rose-400 to-pink-600',
+   647→      emoji: '💪',
+   648→      preview: isAr ? 'أحسنت يا بطل! استمر في التعلم!' : 'Great job champion! Keep learning!',
+   649→    },
+   650→    {
+   651→      title: pc.birthday,
+   652→      desc: pc.birthdayDesc,
+   653→      color: 'from-amber-400 to-orange-500',
+   654→      emoji: '🎂',
+   655→      preview: isAr ? 'عيد ميلاد سعيد! 🎉' : 'Happy Birthday! 🎉',
+   656→    },
+   657→    {
+   658→      title: pc.motivational,
+   659→      desc: pc.motivationalDesc,
+   660→      color: 'from-sky-400 to-cyan-600',
+   661→      emoji: '🚀',
+   662→      preview: isAr ? 'أنتم المستقبل! 🌟' : 'You are the future! 🌟',
+   663→    },
+   664→  ]
+   665→
+   666→  return (
+   667→    <div className="space-y-6">
+   668→      <motion.div
+   669→        className="bg-white rounded-3xl p-6 md:p-8 border border-sky-100 shadow-lg"
+   670→        initial={{ opacity: 0, y: 20 }}
+   671→        animate={{ opacity: 1, y: 0 }}
+   672→      >
+   673→        <div className="flex items-center gap-3 mb-6">
+   674→          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-400 to-pink-600 flex items-center justify-center text-white shadow-lg">
+   675→            <Video className="w-7 h-7" />
+   676→          </div>
+   677→          <div>
+   678→            <h3 className="text-xl font-bold text-sky-900">{pc.title}</h3>
+   679→            <p className="text-sky-500/70 text-sm">{pc.subtitle}</p>
+   680→          </div>
+   681→        </div>
+   682→
+   683→        {/* Upload area */}
+   684→        <input
+   685→          ref={fileInputRef}
+   686→          type="file"
+   687→          accept="image/*"
+   688→          onChange={handleFileChange}
+   689→          className="hidden"
+   690→        />
+   691→        <div
+   692→          className="border-2 border-dashed border-sky-200 rounded-2xl p-8 text-center hover:border-sky-400 transition-colors cursor-pointer bg-sky-50/50 relative overflow-hidden"
+   693→          onClick={() => fileInputRef.current?.click()}
+   694→        >
+   695→          {uploadedImage ? (
+   696→            <div className="flex flex-col items-center gap-3">
+   697→              <img src={uploadedImage} alt="Uploaded" className="w-24 h-24 rounded-2xl object-cover shadow-md" />
+   698→              <p className="text-sky-600 font-semibold text-sm">{isAr ? 'تم رفع الصورة بنجاح!' : 'Photo uploaded!'}</p>
+   699→            </div>
+   700→          ) : (
+   701→            <>
+   702→              <Upload className="w-12 h-12 mx-auto text-sky-400 mb-3" />
+   703→              <p className="text-sky-600 font-semibold mb-1">{pc.uploadPhoto}</p>
+   704→              <p className="text-sky-400 text-sm">{pc.uploadPlaceholder}</p>
+   705→            </>
+   706→          )}
+   707→        </div>
+   708→      </motion.div>
+   709→
+   710→      {/* Video Cards */}
+   711→      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+   712→        {videoTypes.map((video, i) => (
+   713→          <motion.div
+   714→            key={video.title}
+   715→            className="bg-white rounded-2xl overflow-hidden border border-sky-100 shadow-sm hover:shadow-lg transition-all group"
+   716→            initial={{ opacity: 0, y: 20 }}
+   717→            animate={{ opacity: 1, y: 0 }}
+   718→            transition={{ delay: i * 0.1 }}
+   719→          >
+   720→            <div className={`bg-gradient-to-br ${video.color} p-8 text-white relative min-h-[180px] flex flex-col justify-between`}>
+   721→              <div className="absolute top-3 end-3">
+   722→                <span className="bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-full text-xs font-bold">{pc.comingSoon}</span>
+   723→              </div>
+   724→              <span className="text-5xl">{video.emoji}</span>
+   725→              <div className="mt-3 bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center">
+   726→                <p className="text-sm font-semibold">{video.preview}</p>
+   727→              </div>
+   728→            </div>
+   729→            <div className="p-4">
+   730→              <h4 className="font-bold text-sky-900 mb-1">{video.title}</h4>
+   731→              <p className="text-sky-500/70 text-sm mb-3">{video.desc}</p>
+   732→              <button
+   733→                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-sky-100 to-sky-200 text-sky-500 font-semibold text-sm cursor-not-allowed flex items-center justify-center gap-2"
+   734→                disabled
+   735→              >
+   736→                <Lock className="w-4 h-4" />
+   737→                {pc.comingSoon}
+   738→              </button>
+   739→            </div>
+   740→          </motion.div>
+   741→        ))}
+   742→      </div>
+   743→    </div>
+   744→  )
+   745→}
+   746→
+   747→// ========================
+   748→// 4. Tips Section (Enhanced)
+   749→// ========================
+   750→function TipsSection() {
+   751→  const { t, isAr } = useLanguage()
+   752→  const pc = t.parentCorner.tips
+   753→  const [expandedTip, setExpandedTip] = useState<number | null>(null)
+   754→  const [filter, setFilter] = useState<'all' | 'reading' | 'behavior' | 'learning'>('all')
+   755→
+   756→  const tipsData = [
+   757→    { title: pc.tip1, desc: pc.tip1Desc, color: 'from-sky-400 to-sky-600', emoji: '📖', category: 'reading' as const },
+   758→    { title: pc.tip2, desc: pc.tip2Desc, color: 'from-amber-400 to-orange-500', emoji: '📱', category: 'behavior' as const },
+   759→    { title: pc.tip3, desc: pc.tip3Desc, color: 'from-rose-400 to-pink-600', emoji: '💪', category: 'behavior' as const },
+   760→    { title: pc.tip4, desc: pc.tip4Desc, color: 'from-emerald-400 to-teal-600', emoji: '🔢', category: 'learning' as const },
+   761→    { title: pc.tip5, desc: pc.tip5Desc, color: 'from-violet-400 to-purple-600', emoji: '🧘', category: 'behavior' as const },
+   762→    { title: pc.tip6, desc: pc.tip6Desc, color: 'from-pink-400 to-rose-600', emoji: '🎨', category: 'learning' as const },
+   763→    { title: pc.tip7, desc: pc.tip7Desc, color: 'from-cyan-400 to-sky-600', emoji: '🎯', category: 'learning' as const },
+   764→    { title: pc.tip8, desc: pc.tip8Desc, color: 'from-orange-400 to-amber-600', emoji: '🤗', category: 'behavior' as const },
+   765→  ]
+   766→
+   767→  const filteredTips = filter === 'all' ? tipsData : tipsData.filter(t => t.category === filter)
+   768→  const filters = [
+   769→    { id: 'all' as const, label: isAr ? 'الكل' : 'All' },
+   770→    { id: 'reading' as const, label: isAr ? 'القراءة' : 'Reading' },
+   771→    { id: 'behavior' as const, label: isAr ? 'السلوك' : 'Behavior' },
+   772→    { id: 'learning' as const, label: isAr ? 'التعلم' : 'Learning' },
+   773→  ]
+   774→
+   775→  return (
+   776→    <div className="space-y-6">
+   777→      <motion.div
+   778→        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+   779→        initial={{ opacity: 0, y: 20 }}
+   780→        animate={{ opacity: 1, y: 0 }}
+   781→      >
+   782→        <div className="flex items-center gap-3">
+   783→          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center text-white shadow-lg">
+   784→            <Lightbulb className="w-7 h-7" />
+   785→          </div>
+   786→          <div>
+   787→            <h3 className="text-xl font-bold text-sky-900">{pc.title}</h3>
+   788→            <p className="text-sky-500/70 text-sm">{pc.subtitle}</p>
+   789→          </div>
+   790→        </div>
+   791→
+   792→        {/* Filter */}
+   793→        <div className="flex gap-1.5 bg-sky-50 p-1 rounded-xl">
+   794→          {filters.map(f => (
+   795→            <button
+   796→              key={f.id}
+   797→              onClick={() => setFilter(f.id)}
+   798→              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+   799→                filter === f.id
+   800→                  ? 'bg-white text-sky-700 shadow-sm'
+   801→                  : 'text-sky-500 hover:text-sky-700'
+   802→              }`}
+   803→            >
+   804→              {f.label}
+   805→            </button>
+   806→          ))}
+   807→        </div>
+   808→      </motion.div>
+   809→
+   810→      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+   811→        <AnimatePresence>
+   812→          {filteredTips.map((tip, i) => {
+   813→            const originalIndex = tipsData.indexOf(tip)
+   814→            return (
+   815→              <motion.div
+   816→                key={tip.title}
+   817→                className="bg-white rounded-2xl border border-sky-100 shadow-sm hover:shadow-lg transition-all cursor-pointer overflow-hidden"
+   818→                initial={{ opacity: 0, y: 20 }}
+   819→                animate={{ opacity: 1, y: 0 }}
+   820→                exit={{ opacity: 0, scale: 0.9 }}
+   821→                transition={{ delay: i * 0.05 }}
+   822→                onClick={() => setExpandedTip(expandedTip === originalIndex ? null : originalIndex)}
+   823→                layout
+   824→              >
+   825→                <div className={`bg-gradient-to-br ${tip.color} p-5 flex items-start justify-between`}>
+   826→                  <span className="text-3xl">{tip.emoji}</span>
+   827→                  <div className="flex items-center gap-1 text-white/80 text-xs bg-white/15 rounded-full px-2 py-0.5">
+   828→                    <Clock className="w-3 h-3" />
+   829→                    1 {pc.minuteRead}
+   830→                  </div>
+   831→                </div>
+   832→                <div className="p-4">
+   833→                  <h4 className="font-bold text-sky-900 text-sm mb-2 leading-tight">{tip.title}</h4>
+   834→                  <AnimatePresence>
+   835→                    {expandedTip === originalIndex ? (
+   836→                      <motion.div
+   837→                        initial={{ opacity: 0, height: 0 }}
+   838→                        animate={{ opacity: 1, height: 'auto' }}
+   839→                        exit={{ opacity: 0, height: 0 }}
+   840→                        className="overflow-hidden"
+   841→                      >
+   842→                        <p className="text-sky-600/80 text-xs leading-relaxed">{tip.desc}</p>
+   843→                      </motion.div>
+   844→                    ) : (
+   845→                      <motion.p
+   846→                        className="text-sky-400 text-xs"
+   847→                        initial={{ opacity: 0 }}
+   848→                        animate={{ opacity: 1 }}
+   849→                      >
+   850→                        {pc.readMore}...
+   851→                      </motion.p>
+   852→                    )}
+   853→                  </AnimatePresence>
+   854→                </div>
+   855→              </motion.div>
+   856→            )
+   857→          })}
+   858→        </AnimatePresence>
+   859→      </div>
+   860→    </div>
+   861→  )
+   862→}
+   863→
+   864→// ========================
+   865→// 5. Certificates Section (Enhanced)
+   866→// ========================
+   867→function CertificatesSection() {
+   868→  const { t, isAr } = useLanguage()
+   869→  const pc = t.parentCorner.certificates
+   870→  const [childName, setChildName] = useState(isAr ? 'أحمد' : 'Ahmed')
+   871→  const [selectedCert, setSelectedCert] = useState<number>(0)
+   872→  const certRef = useRef<HTMLDivElement>(null)
+   873→
+   874→  const certificates = [
+   875→    {
+   876→      title: pc.bestReader,
+   877→      desc: pc.bestReaderDesc,
+   878→      icon: '📚',
+   879→      color: 'from-sky-400 to-sky-600',
+   880→      borderColor: 'border-sky-300',
+   881→      bgGradient: 'from-sky-50 via-white to-sky-50',
+   882→      accent: 'sky',
+   883→      stars: 5,
+   884→    },
+   885→    {
+   886→      title: pc.mathChampion,
+   887→      desc: pc.mathChampionDesc,
+   888→      icon: '🏆',
+   889→      color: 'from-amber-400 to-orange-500',
+   890→      borderColor: 'border-amber-300',
+   891→      bgGradient: 'from-amber-50 via-white to-amber-50',
+   892→      accent: 'amber',
+   893→      stars: 5,
+   894→    },
+   895→    {
+   896→      title: pc.scienceExplorer,
+   897→      desc: pc.scienceExplorerDesc,
+   898→      icon: '🔬',
+   899→      color: 'from-emerald-400 to-teal-600',
+   900→      borderColor: 'border-emerald-300',
+   901→      bgGradient: 'from-emerald-50 via-white to-emerald-50',
+   902→      accent: 'emerald',
+   903→      stars: 5,
+   904→    },
+   905→  ]
+   906→
+   907→  const handleDownload = useCallback(() => {
+   908→    // Simple text download as certificate
+   909→    const cert = certificates[selectedCert]
+   910→    const text = `
+   911→${'═'.repeat(40)}
+   912→    ${cert.title}
+   913→${'═'.repeat(40)}
+   914→
+   915→${'★'.repeat(cert.stars)}
+   916→
+   917→    ${childName || (isAr ? 'اسم الطفل' : 'Child Name')}
+   918→
+   919→${isAr ? 'تهنئة من كوبيستو على إنجازك الرائع!' : 'Congratulations from Kopisto on your amazing achievement!'}
+   920→
+   921→${cert.desc}
+   922→
+   923→${'─'.repeat(40)}
+   924→Kopisto © ${new Date().getFullYear()}
+   925→${'═'.repeat(40)}
+   926→`.trim()
+   927→
+   928→    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
+   929→    const url = URL.createObjectURL(blob)
+   930→    const a = document.createElement('a')
+   931→    a.href = url
+   932→    a.download = `${childName || 'certificate'}-${cert.title}.txt`
+   933→    a.click()
+   934→    URL.revokeObjectURL(url)
+   935→  }, [selectedCert, childName, certificates, isAr])
+   936→
+   937→  return (
+   938→    <div className="space-y-6">
+   939→      <motion.div
+   940→        className="flex items-center gap-3 mb-2"
+   941→        initial={{ opacity: 0, y: 20 }}
+   942→        animate={{ opacity: 1, y: 0 }}
+   943→      >
+   944→        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-white shadow-lg">
+   945→          <Award className="w-7 h-7" />
+   946→        </div>
+   947→        <div>
+   948→          <h3 className="text-xl font-bold text-sky-900">{pc.title}</h3>
+   949→          <p className="text-sky-500/70 text-sm">{pc.subtitle}</p>
+   950→        </div>
+   951→      </motion.div>
+   952→
+   953→      {/* Name input */}
+   954→      <motion.div
+   955→        className="bg-white rounded-2xl p-4 border border-sky-100 shadow-sm flex flex-col sm:flex-row gap-3 items-end"
+   956→        initial={{ opacity: 0, y: 20 }}
+   957→        animate={{ opacity: 1, y: 0 }}
+   958→        transition={{ delay: 0.1 }}
+   959→      >
+   960→        <div className="flex-1 w-full">
+   961→          <label className="block text-sm font-semibold text-sky-800 mb-2">{pc.childName}</label>
+   962→          <input
+   963→            type="text"
+   964→            value={childName}
+   965→            onChange={(e) => setChildName(e.target.value)}
+   966→            placeholder={pc.childNamePlaceholder}
+   967→            className="w-full px-4 py-3 rounded-xl border border-sky-200 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none transition-all text-sky-900 placeholder:text-sky-300"
+   968→          />
+   969→        </div>
+   970→      </motion.div>
+   971→
+   972→      {/* Certificate selector and preview */}
+   973→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+   974→        {/* Certificate list */}
+   975→        <div className="space-y-3">
+   976→          {certificates.map((cert, i) => (
+   977→            <motion.div
+   978→              key={i}
+   979→              className={`rounded-2xl p-5 cursor-pointer transition-all ${
+   980→                selectedCert === i
+   981→                  ? `bg-gradient-to-r ${cert.color} text-white shadow-lg`
+   982→                  : 'bg-white border border-sky-100 shadow-sm hover:shadow-md'
+   983→              }`}
+   984→              initial={{ opacity: 0, x: isAr ? 20 : -20 }}
+   985→              animate={{ opacity: 1, x: 0 }}
+   986→              transition={{ delay: i * 0.1 }}
+   987→              onClick={() => setSelectedCert(i)}
+   988→              whileHover={{ scale: 1.02 }}
+   989→              whileTap={{ scale: 0.98 }}
+   990→            >
+   991→              <div className="flex items-center gap-4">
+   992→                <span className="text-4xl">{cert.icon}</span>
+   993→                <div className="flex-1">
+   994→                  <h4 className={`font-bold text-lg ${selectedCert === i ? 'text-white' : 'text-sky-900'}`}>{cert.title}</h4>
+   995→                  <p className={`text-sm mt-1 ${selectedCert === i ? 'text-white/80' : 'text-sky-500/70'}`}>{cert.desc}</p>
+   996→                </div>
+   997→                {selectedCert === i && <CheckCircle2 className="w-6 h-6 text-white" />}
+   998→              </div>
+   999→            </motion.div>
+  1000→          ))}
+  1001→        </div>
+  1002→
+  1003→        {/* Certificate Preview */}
+  1004→        <motion.div
+  1005→          className={`bg-gradient-to-br ${certificates[selectedCert].bgGradient} rounded-2xl border-2 ${certificates[selectedCert].borderColor} p-8 shadow-lg relative overflow-hidden`}
+  1006→          initial={{ opacity: 0, scale: 0.95 }}
+  1007→          animate={{ opacity: 1, scale: 1 }}
+  1008→          key={selectedCert}
+  1009→          ref={certRef}
+  1010→        >
+  1011→          {/* Decorative elements */}
+  1012→          <div className="absolute top-6 start-6 w-10 h-10 border-t-3 border-s-3 border-sky-300/60 rounded-tl-lg" />
+  1013→          <div className="absolute top-6 end-6 w-10 h-10 border-t-3 border-e-3 border-sky-300/60 rounded-tr-lg" />
+  1014→          <div className="absolute bottom-6 start-6 w-10 h-10 border-b-3 border-s-3 border-sky-300/60 rounded-bl-lg" />
+  1015→          <div className="absolute bottom-6 end-6 w-10 h-10 border-b-3 border-e-3 border-sky-300/60 rounded-br-lg" />
+  1016→
+  1017→          {/* Kopisto watermark */}
+  1018→          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-5">
+  1019→            <Image src="/kopisto-idle-256.png" alt="" width={200} height={200} className="w-40 h-40 object-contain" />
+  1020→          </div>
+  1021→
+  1022→          <div className="text-center relative z-10">
+  1023→            <div className="text-6xl mb-4">{certificates[selectedCert].icon}</div>
+  1024→            <div className="text-amber-400 text-lg font-bold mb-3">
+  1025→              {'★'.repeat(certificates[selectedCert].stars)}
+  1026→            </div>
+  1027→            <h4 className="text-xl font-bold text-sky-900 mb-2">{certificates[selectedCert].title}</h4>
+  1028→            <div className="w-32 h-0.5 bg-gradient-to-r from-transparent via-sky-300 to-transparent mx-auto my-4" />
+  1029→            <p className="text-3xl font-bold text-sky-800 mb-2">{childName || (isAr ? 'اسم الطفل' : 'Child Name')}</p>
+  1030→            <p className="text-sky-500/70 text-sm mt-2">{certificates[selectedCert].desc}</p>
+  1031→            <div className="w-32 h-0.5 bg-gradient-to-r from-transparent via-sky-300 to-transparent mx-auto my-4" />
+  1032→            <p className="text-sky-400 text-sm font-semibold">Kopisto © {new Date().getFullYear()}</p>
+  1033→          </div>
+  1034→
+  1035→          <motion.button
+  1036→            onClick={handleDownload}
+  1037→            className="mt-6 w-full py-3.5 rounded-xl bg-gradient-to-r from-sky-500 to-sky-600 text-white font-bold shadow-lg flex items-center justify-center gap-2 text-lg"
+  1038→            whileHover={{ scale: 1.03 }}
+  1039→            whileTap={{ scale: 0.97 }}
+  1040→          >
+  1041→            <Download className="w-5 h-5" />
+  1042→            {pc.download}
+  1043→          </motion.button>
+  1044→        </motion.div>
+  1045→      </div>
+  1046→    </div>
+  1047→  )
+  1048→}
+  1049→
+  1050→// ========================
+  1051→// 6. AI Assistant Section (Enhanced)
+  1052→// ========================
+  1053→function AssistantSection() {
+  1054→  const { t, isAr } = useLanguage()
+  1055→  const pc = t.parentCorner.assistant
+  1056→  const [messages, setMessages] = useState<ChatMessage[]>([
+  1057→    { role: 'assistant', content: pc.welcome },
+  1058→  ])
+  1059→  const [input, setInput] = useState('')
+  1060→  const [isLoading, setIsLoading] = useState(false)
+  1061→  const chatEndRef = useRef<HTMLDivElement>(null)
+  1062→
+  1063→  const suggestedQuestions = isAr ? [
+  1064→    'ابني عمره 7 سنوات ويكره الرياضيات، ماذا أفعل؟',
+  1065→    'كيف أجعل طفلي يحب القراءة؟',
+  1066→    'ابنتي خجولة جداً، كيف أعزز ثقتها بنفسها؟',
+  1067→    'كم ساعة يجب أن يقضي طفلي أمام الشاشة؟',
+  1068→  ] : [
+  1069→    'My 7-year-old hates math, what should I do?',
+  1070→    'How can I make my child love reading?',
+  1071→    'My daughter is very shy, how to boost her confidence?',
+  1072→    'How much screen time should my child have?',
+  1073→  ]
+  1074→
+  1075→  useEffect(() => {
+  1076→    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  1077→  }, [messages])
+  1078→
+  1079→  const handleSend = async () => {
+  1080→    if (!input.trim() || isLoading) return
+  1081→
+  1082→    const userMessage = input.trim()
+  1083→    setInput('')
+  1084→    setMessages(prev => [...prev, { role: 'user', content: userMessage }])
+  1085→    setIsLoading(true)
+  1086→
+  1087→    try {
+  1088→      const history = messages.map(m => ({ role: m.role, content: m.content }))
+  1089→      const res = await fetch('/api/parent-assistant', {
+  1090→        method: 'POST',
+  1091→        headers: { 'Content-Type': 'application/json' },
+  1092→        body: JSON.stringify({
+  1093→          message: userMessage,
+  1094→          language: isAr ? 'ar' : 'en',
+  1095→          history,
+  1096→        }),
+  1097→      })
+  1098→      const data = await res.json()
+  1099→      if (data.reply) {
+  1100→        setMessages(prev => [...prev, { role: 'assistant', content: data.reply }])
+  1101→      } else {
+  1102→        setMessages(prev => [...prev, { role: 'assistant', content: pc.errorReply }])
+  1103→      }
+  1104→    } catch {
+  1105→      setMessages(prev => [...prev, { role: 'assistant', content: pc.errorReply }])
+  1106→    } finally {
+  1107→      setIsLoading(false)
+  1108→    }
+  1109→  }
+  1110→
+  1111→  const handleSuggestedQuestion = (question: string) => {
+  1112→    setInput(question)
+  1113→  }
+  1114→
+  1115→  return (
+  1116→    <div className="space-y-4">
+  1117→      <motion.div
+  1118→        className="bg-white rounded-3xl border border-sky-100 shadow-lg overflow-hidden flex flex-col"
+  1119→        style={{ height: '600px' }}
+  1120→        initial={{ opacity: 0, y: 20 }}
+  1121→        animate={{ opacity: 1, y: 0 }}
+  1122→      >
+  1123→        {/* Header */}
+  1124→        <div className="bg-gradient-to-r from-violet-500 via-purple-600 to-indigo-600 p-4 text-white">
+  1125→          <div className="flex items-center gap-3">
+  1126→            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center overflow-hidden">
+  1127→              <Image src="/kopisto-idle-256.png" alt="Kopisto" width={48} height={48} className="w-full h-full object-contain" />
+  1128→            </div>
+  1129→            <div>
+  1130→              <h3 className="font-bold text-lg">{pc.title}</h3>
+  1131→              <p className="text-white/80 text-xs">{pc.subtitle}</p>
+  1132→            </div>
+  1133→            <div className="ms-auto flex items-center gap-1.5 bg-white/20 rounded-full px-3 py-1">
+  1134→              <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+  1135→              <span className="text-xs">{isAr ? 'متصل' : 'Online'}</span>
+  1136→            </div>
+  1137→          </div>
+  1138→        </div>
+  1139→
+  1140→        {/* Suggested Questions */}
+  1141→        {messages.length <= 1 && (
+  1142→          <div className="p-3 bg-violet-50/50 border-b border-violet-100">
+  1143→            <p className="text-xs text-violet-600 font-semibold mb-2">{isAr ? '💡 أسئلة مقترحة:' : '💡 Suggested questions:'}</p>
+  1144→            <div className="flex flex-wrap gap-1.5">
+  1145→              {suggestedQuestions.map((q, i) => (
+  1146→                <button
+  1147→                  key={i}
+  1148→                  onClick={() => handleSuggestedQuestion(q)}
+  1149→                  className="text-xs bg-white text-violet-700 px-3 py-1.5 rounded-full border border-violet-200 hover:bg-violet-100 transition-colors truncate max-w-[200px]"
+  1150→                >
+  1151→                  {q}
+  1152→                </button>
+  1153→              ))}
+  1154→            </div>
+  1155→          </div>
+  1156→        )}
+  1157→
+  1158→        {/* Messages */}
+  1159→        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+  1160→          {messages.map((msg, i) => (
+  1161→            <motion.div
+  1162→              key={i}
+  1163→              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+  1164→              initial={{ opacity: 0, y: 10 }}
+  1165→              animate={{ opacity: 1, y: 0 }}
+  1166→              transition={{ delay: 0.05 }}
+  1167→            >
+  1168→              {msg.role === 'assistant' && (
+  1169→                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-400 to-purple-600 flex items-center justify-center text-white shadow-sm me-2 mt-1 flex-shrink-0 overflow-hidden">
+  1170→                  <Image src="/kopisto-idle-256.png" alt="K" width={32} height={32} className="w-full h-full object-contain" />
+  1171→                </div>
+  1172→              )}
+  1173→              <div
+  1174→                className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+  1175→                  msg.role === 'user'
+  1176→                    ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white rounded-br-md'
+  1177→                    : 'bg-sky-50 text-sky-900 rounded-bl-md border border-sky-100'
+  1178→                }`}
+  1179→                dir={isAr ? 'rtl' : 'ltr'}
+  1180→              >
+  1181→                {msg.content}
+  1182→              </div>
+  1183→            </motion.div>
+  1184→          ))}
+  1185→
+  1186→          {isLoading && (
+  1187→            <motion.div
+  1188→              className="flex justify-start"
+  1189→              initial={{ opacity: 0 }}
+  1190→              animate={{ opacity: 1 }}
+  1191→            >
+  1192→              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-400 to-purple-600 flex items-center justify-center text-white shadow-sm me-2 mt-1 flex-shrink-0 overflow-hidden">
+  1193→                <Image src="/kopisto-idle-256.png" alt="K" width={32} height={32} className="w-full h-full object-contain" />
+  1194→              </div>
+  1195→              <div className="bg-sky-50 rounded-2xl rounded-bl-md px-4 py-3 border border-sky-100 flex items-center gap-2">
+  1196→                <motion.div className="flex gap-1">
+  1197→                  {[0, 1, 2].map((dot) => (
+  1198→                    <motion.div
+  1199→                      key={dot}
+  1200→                      className="w-2 h-2 bg-violet-400 rounded-full"
+  1201→                      animate={{ y: [0, -6, 0] }}
+  1202→                      transition={{ duration: 0.6, repeat: Infinity, delay: dot * 0.15 }}
+  1203→                    />
+  1204→                  ))}
+  1205→                </motion.div>
+  1206→                <span className="text-sky-500 text-sm">{pc.thinking}</span>
+  1207→              </div>
+  1208→            </motion.div>
+  1209→          )}
+  1210→          <div ref={chatEndRef} />
+  1211→        </div>
+  1212→
+  1213→        {/* Input */}
+  1214→        <div className="p-4 border-t border-sky-100 bg-sky-50/50">
+  1215→          <div className="flex gap-2">
+  1216→            <input
+  1217→              type="text"
+  1218→              value={input}
+  1219→              onChange={(e) => setInput(e.target.value)}
+  1220→              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+  1221→              placeholder={pc.placeholder}
+  1222→              className="flex-1 px-4 py-3 rounded-xl border border-sky-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-100 outline-none transition-all text-sm text-sky-900 placeholder:text-sky-300"
+  1223→              disabled={isLoading}
+  1224→            />
+  1225→            <motion.button
+  1226→              onClick={handleSend}
+  1227→              disabled={isLoading || !input.trim()}
+  1228→              className={`px-5 py-3 rounded-xl font-bold text-white shadow-md flex items-center justify-center transition-all ${
+  1229→                isLoading || !input.trim()
+  1230→                  ? 'bg-gray-300 cursor-not-allowed'
+  1231→                  : 'bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700'
+  1232→              }`}
+  1233→              whileHover={!isLoading && input.trim() ? { scale: 1.05 } : {}}
+  1234→              whileTap={!isLoading && input.trim() ? { scale: 0.95 } : {}}
+  1235→            >
+  1236→              <Send className="w-5 h-5" />
+  1237→            </motion.button>
+  1238→          </div>
+  1239→        </div>
+  1240→      </motion.div>
+  1241→    </div>
+  1242→  )
+  1243→}
+  1244→
+  1245→// ========================
+  1246→// 7. Weekly Report Section (Enhanced)
+  1247→// ========================
+  1248→function WeeklyReportSection() {
+  1249→  const { t, isAr } = useLanguage()
+  1250→  const pc = t.parentCorner.weeklyReport
+  1251→
+  1252→  const maxMinutes = Math.max(...mockWeeklyData.map(d => d.minutes))
+  1253→  const dayLabels: Record<string, string> = {
+  1254→    sat: pc.sat, sun: pc.sun, mon: pc.mon, tue: pc.tue, wed: pc.wed, thu: pc.thu, fri: pc.fri
+  1255→  }
+  1256→
+  1257→  const summaryStats = [
+  1258→    { value: 5, label: pc.gamesThisWeek, icon: <Rocket className="w-6 h-6" />, color: 'from-sky-400 to-sky-600' },
+  1259→    { value: 12, label: pc.wordsThisWeek, icon: <BookOpen className="w-6 h-6" />, color: 'from-amber-400 to-amber-600' },
+  1260→    { value: 40, label: pc.minutesThisWeek, icon: <Clock className="w-6 h-6" />, color: 'from-emerald-400 to-teal-600' },
+  1261→  ]
+  1262→
+  1263→  return (
+  1264→    <div className="space-y-6">
+  1265→      {/* Summary Stats */}
+  1266→      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+  1267→        {summaryStats.map((stat, i) => (
+  1268→          <motion.div
+  1269→            key={stat.label}
+  1270→            className="bg-white rounded-2xl p-6 border border-sky-100 shadow-sm text-center"
+  1271→            initial={{ opacity: 0, y: 20 }}
+  1272→            animate={{ opacity: 1, y: 0 }}
+  1273→            transition={{ delay: i * 0.1 }}
+  1274→          >
+  1275→            <div className={`w-14 h-14 rounded-2xl mx-auto flex items-center justify-center text-white bg-gradient-to-br ${stat.color} mb-3 shadow-md`}>
+  1276→              {stat.icon}
+  1277→            </div>
+  1278→            <div className="text-4xl font-bold text-sky-900">{stat.value}</div>
+  1279→            <div className="text-sm text-sky-500/70 mt-1">{stat.label}</div>
+  1280→          </motion.div>
+  1281→        ))}
+  1282→      </div>
+  1283→
+  1284→      {/* Daily Activity Chart */}
+  1285→      <motion.div
+  1286→        className="bg-white rounded-2xl p-6 border border-sky-100 shadow-sm"
+  1287→        initial={{ opacity: 0, y: 20 }}
+  1288→        animate={{ opacity: 1, y: 0 }}
+  1289→        transition={{ delay: 0.2 }}
+  1290→      >
+  1291→        <h4 className="font-bold text-sky-900 mb-6 flex items-center gap-2">
+  1292→          <TrendingUp className="w-5 h-5 text-sky-500" />
+  1293→          {pc.dailyActivity}
+  1294→        </h4>
+  1295→        <div className="flex items-end justify-between gap-2 h-48">
+  1296→          {mockWeeklyData.map((day, i) => (
+  1297→            <div key={day.day} className="flex-1 flex flex-col items-center gap-2">
+  1298→              <span className="text-xs font-bold text-sky-900">{day.minutes}</span>
+  1299→              <motion.div
+  1300→                className="w-full rounded-t-lg bg-gradient-to-t from-sky-400 to-sky-500 relative overflow-hidden"
+  1301→                initial={{ height: 0 }}
+  1302→                animate={{ height: `${(day.minutes / maxMinutes) * 100}%` }}
+  1303→                transition={{ duration: 0.8, delay: i * 0.1 }}
+  1304→              >
+  1305→                <div className="absolute inset-0 bg-white/10" />
+  1306→              </motion.div>
+  1307→              <span className="text-xs text-sky-500 font-medium">{dayLabels[day.day] || day.day}</span>
+  1308→            </div>
+  1309→          ))}
+  1310→        </div>
+  1311→      </motion.div>
+  1312→
+  1313→      {/* Weekly Summary */}
+  1314→      <motion.div
+  1315→        className="bg-gradient-to-r from-sky-500 to-sky-600 rounded-2xl p-6 text-white"
+  1316→        initial={{ opacity: 0, y: 20 }}
+  1317→        animate={{ opacity: 1, y: 0 }}
+  1318→        transition={{ delay: 0.3 }}
+  1319→      >
+  1320→        <h4 className="font-bold text-lg mb-3 flex items-center gap-2">
+  1321→          <Star className="w-5 h-5" />
+  1322→          {pc.summary}
+  1323→        </h4>
+  1324→        <p className="text-white/90 leading-relaxed">
+  1325→          {isAr
+  1326→            ? `هذا الأسبوع أكمل طفلك 5 ألعاب وتعلم 12 كلمة جديدة وقضى 40 دقيقة في الأنشطة التعليمية. أحسن يوم كان الخميس بـ 35 دقيقة نشاط. استمر في تشجيع طفلك! 🌟`
+  1327→            : `This week your child completed 5 games, learned 12 new words, and spent 40 minutes on educational activities. Best day was Thursday with 35 minutes of activity. Keep encouraging your child! 🌟`
+  1328→          }
+  1329→        </p>
+  1330→      </motion.div>
+  1331→    </div>
+  1332→  )
+  1333→}
+  1334→
+  1335→// ========================
+  1336→// 8. Store Section (Enhanced)
+  1337→// ========================
+  1338→function StoreSection() {
+  1339→  const { t, isAr } = useLanguage()
+  1340→  const pc = t.parentCorner.store
+  1341→
+  1342→  const products = [
+  1343→    { title: pc.product1, desc: pc.product1Desc, emoji: '🎨', color: 'from-pink-400 to-rose-600' },
+  1344→    { title: pc.product2, desc: pc.product2Desc, emoji: '📖', color: 'from-amber-400 to-orange-500' },
+  1345→    { title: pc.product3, desc: pc.product3Desc, emoji: '🃏', color: 'from-sky-400 to-sky-600' },
+  1346→    { title: pc.product4, desc: pc.product4Desc, emoji: '🐰', color: 'from-emerald-400 to-teal-600' },
+  1347→    { title: pc.product5, desc: pc.product5Desc, emoji: '🏷️', color: 'from-violet-400 to-purple-600' },
+  1348→    { title: pc.product6, desc: pc.product6Desc, emoji: '📓', color: 'from-orange-400 to-red-500' },
+  1349→  ]
+  1350→
+  1351→  return (
+  1352→    <div className="space-y-6">
+  1353→      <motion.div
+  1354→        className="flex items-center gap-3 mb-2"
+  1355→        initial={{ opacity: 0, y: 20 }}
+  1356→        animate={{ opacity: 1, y: 0 }}
+  1357→      >
+  1358→        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white shadow-lg">
+  1359→          <ShoppingBag className="w-7 h-7" />
+  1360→        </div>
+  1361→        <div>
+  1362→          <h3 className="text-xl font-bold text-sky-900">{pc.title}</h3>
+  1363→          <p className="text-sky-500/70 text-sm">{pc.subtitle}</p>
+  1364→        </div>
+  1365→        <div className="ms-auto bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-bold">
+  1366→          {pc.comingSoon}
+  1367→        </div>
+  1368→      </motion.div>
+  1369→
+  1370→      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  1371→        {products.map((product, i) => (
+  1372→          <motion.div
+  1373→            key={i}
+  1374→            className="bg-white rounded-2xl overflow-hidden border border-sky-100 shadow-sm hover:shadow-lg transition-all group"
+  1375→            initial={{ opacity: 0, y: 20 }}
+  1376→            animate={{ opacity: 1, y: 0 }}
+  1377→            transition={{ delay: i * 0.05 }}
+  1378→          >
+  1379→            <div className={`bg-gradient-to-br ${product.color} p-8 text-center relative`}>
+  1380→              <span className="text-5xl block">{product.emoji}</span>
+  1381→              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+  1382→            </div>
+  1383→            <div className="p-4">
+  1384→              <h4 className="font-bold text-sky-900 mb-1">{product.title}</h4>
+  1385→              <p className="text-sky-500/70 text-sm mb-3">{product.desc}</p>
+  1386→              <button className="w-full py-2.5 rounded-xl bg-sky-50 text-sky-500 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-sky-100 transition-colors">
+  1387→                <Bell className="w-4 h-4" />
+  1388→                {pc.notify}
+  1389→              </button>
+  1390→            </div>
+  1391→          </motion.div>
+  1392→        ))}
+  1393→      </div>
+  1394→    </div>
+  1395→  )
+  1396→}
+  1397→
+  1398→// Bell icon component for store
+  1399→function Bell({ className }: { className?: string }) {
+  1400→  return (
+  1401→    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+  1402→      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+  1403→      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+  1404→    </svg>
+  1405→  )
+  1406→}
+  1407→
+  1408→// ========================
+  1409→// 9. Memory Box Section (Enhanced)
+  1410→// ========================
+  1411→function MemoryBoxSection() {
+  1412→  const { t, isAr } = useLanguage()
+  1413→  const pc = t.parentCorner.memoryBox
+  1414→  const [memories, setMemories] = useState<MemoryItem[]>([
+  1415→    { id: '1', type: 'achievement', url: '', caption: isAr ? 'شارة مستكشف العلوم' : 'Science Explorer Badge', date: '2026-05-20' },
+  1416→    { id: '2', type: 'achievement', url: '', caption: isAr ? 'أكمل 10 ألعاب' : 'Completed 10 Games', date: '2026-05-15' },
+  1417→    { id: '3', type: 'drawing', url: '', caption: isAr ? 'رسمة كوبيستو' : 'Kopisto Drawing', date: '2026-05-10' },
+  1418→  ])
+  1419→  const [activeMemoryTab, setActiveMemoryTab] = useState<'all' | 'photos' | 'drawings' | 'achievements'>('all')
+  1420→  const fileInputRef = useRef<HTMLInputElement>(null)
+  1421→
+  1422→  const handleUpload = (type: 'photo' | 'drawing' | 'achievement') => {
+  1423→    fileInputRef.current?.click()
+  1424→  }
+  1425→
+  1426→  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  1427→    const file = e.target.files?.[0]
+  1428→    if (file) {
+  1429→      const reader = new FileReader()
+  1430→      reader.onloadend = () => {
+  1431→        const newMemory: MemoryItem = {
+  1432→          id: Date.now().toString(),
+  1433→          type: 'photo',
+  1434→          url: reader.result as string,
+  1435→          caption: file.name,
+  1436→          date: new Date().toISOString().split('T')[0],
+  1437→        }
+  1438→        setMemories(prev => [newMemory, ...prev])
+  1439→      }
+  1440→      reader.readAsDataURL(file)
+  1441→    }
+  1442→  }
+  1443→
+  1444→  const filteredMemories = activeMemoryTab === 'all'
+  1445→    ? memories
+  1446→    : memories.filter(m => m.type === activeMemoryTab.slice(0, -1)) // remove 's'
+  1447→
+  1448→  const memoryTabs = [
+  1449→    { id: 'all' as const, label: isAr ? 'الكل' : 'All', emoji: '📁' },
+  1450→    { id: 'photos' as const, label: pc.photos, emoji: '📷' },
+  1451→    { id: 'drawings' as const, label: pc.drawings, emoji: '🎨' },
+  1452→    { id: 'achievements' as const, label: pc.achievements, emoji: '🏅' },
+  1453→  ]
+  1454→
+  1455→  return (
+  1456→    <div className="space-y-6">
+  1457→      <input
+  1458→        ref={fileInputRef}
+  1459→        type="file"
+  1460→        accept="image/*"
+  1461→        onChange={handleFileChange}
+  1462→        className="hidden"
+  1463→      />
+  1464→
+  1465→      <motion.div
+  1466→        className="flex items-center gap-3 mb-2"
+  1467→        initial={{ opacity: 0, y: 20 }}
+  1468→        animate={{ opacity: 1, y: 0 }}
+  1469→      >
+  1470→        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-400 to-rose-600 flex items-center justify-center text-white shadow-lg">
+  1471→          <Camera className="w-7 h-7" />
+  1472→        </div>
+  1473→        <div>
+  1474→          <h3 className="text-xl font-bold text-sky-900">{pc.title}</h3>
+  1475→          <p className="text-sky-500/70 text-sm">{pc.subtitle}</p>
+  1476→        </div>
+  1477→      </motion.div>
+  1478→
+  1479→      {/* Upload Buttons */}
+  1480→      <div className="grid grid-cols-3 gap-3">
+  1481→        {[
+  1482→          { type: 'photo' as const, label: pc.uploadPhoto, emoji: '📷', color: 'from-sky-400 to-sky-600' },
+  1483→          { type: 'drawing' as const, label: pc.uploadDrawing, emoji: '🎨', color: 'from-pink-400 to-rose-600' },
+  1484→          { type: 'achievement' as const, label: pc.uploadAchievement, emoji: '🏅', color: 'from-amber-400 to-orange-500' },
+  1485→        ].map((btn) => (
+  1486→          <motion.button
+  1487→            key={btn.type}
+  1488→            onClick={() => handleUpload(btn.type)}
+  1489→            className={`bg-gradient-to-br ${btn.color} text-white rounded-2xl p-4 text-center shadow-md hover:shadow-lg transition-shadow`}
+  1490→            whileHover={{ scale: 1.02 }}
+  1491→            whileTap={{ scale: 0.98 }}
+  1492→          >
+  1493→            <span className="text-3xl block mb-2">{btn.emoji}</span>
+  1494→            <span className="text-xs font-bold">{btn.label}</span>
+  1495→          </motion.button>
+  1496→        ))}
+  1497→      </div>
+  1498→
+  1499→      {/* Memory Tabs */}
+  1500→      <div className="flex gap-2 bg-sky-50 p-1.5 rounded-xl">
+  1501→        {memoryTabs.map(tab => (
+  1502→          <button
+  1503→            key={tab.id}
+  1504→            onClick={() => setActiveMemoryTab(tab.id)}
+  1505→            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+  1506→              activeMemoryTab === tab.id
+  1507→                ? 'bg-white text-sky-700 shadow-sm'
+  1508→                : 'text-sky-500 hover:text-sky-700'
+  1509→            }`}
+  1510→          >
+  1511→            <span>{tab.emoji}</span>
+  1512→            {tab.label}
+  1513→          </button>
+  1514→        ))}
+  1515→      </div>
+  1516→
+  1517→      {/* Memory Grid */}
+  1518→      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+  1519→        {filteredMemories.map((memory, i) => (
+  1520→          <motion.div
+  1521→            key={memory.id}
+  1522→            className="bg-white rounded-2xl border border-sky-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+  1523→            initial={{ opacity: 0, scale: 0.9 }}
+  1524→            animate={{ opacity: 1, scale: 1 }}
+  1525→            transition={{ delay: i * 0.05 }}
+  1526→          >
+  1527→            {memory.url ? (
+  1528→              <img src={memory.url} alt={memory.caption} className="w-full h-32 object-cover" />
+  1529→            ) : (
+  1530→              <div className={`h-32 flex items-center justify-center ${
+  1531→                memory.type === 'achievement' ? 'bg-amber-50' : memory.type === 'drawing' ? 'bg-pink-50' : 'bg-sky-50'
+  1532→              }`}>
+  1533→                <span className="text-4xl">
+  1534→                  {memory.type === 'achievement' ? '🏅' : memory.type === 'drawing' ? '🎨' : '📷'}
+  1535→                </span>
+  1536→              </div>
+  1537→            )}
+  1538→            <div className="p-3">
+  1539→              <p className="text-sm font-semibold text-sky-900 truncate">{memory.caption}</p>
+  1540→              <p className="text-xs text-sky-400 mt-1">{memory.date}</p>
+  1541→            </div>
+  1542→          </motion.div>
+  1543→        ))}
+  1544→      </div>
+  1545→
+  1546→      {/* Create Memory Book */}
+  1547→      <motion.div
+  1548→        className="bg-gradient-to-r from-pink-500 via-rose-500 to-orange-500 rounded-2xl p-6 text-white text-center shadow-lg"
+  1549→        initial={{ opacity: 0, y: 20 }}
+  1550→        animate={{ opacity: 1, y: 0 }}
+  1551→      >
+  1552→        <span className="text-5xl block mb-3">📖</span>
+  1553→        <h4 className="text-xl font-bold mb-2">{pc.memoryBook}</h4>
+  1554→        <p className="text-white/80 text-sm mb-4">
+  1555→          {isAr
+  1556→            ? 'أنشئ كتاب ذكريات 2026 يحتوي على صور وشهادات وقصص طفلك وأفضل رسوماته'
+  1557→            : 'Create a 2026 memory book containing your child\'s photos, certificates, stories, and best drawings'
+  1558→          }
+  1559→        </p>
+  1560→        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+  1561→          <motion.button
+  1562→            className="flex items-center justify-center gap-2 px-6 py-3 bg-white text-rose-600 rounded-xl font-bold shadow-md"
+  1563→            whileHover={{ scale: 1.05 }}
+  1564→            whileTap={{ scale: 0.95 }}
+  1565→          >
+  1566→            <Sparkles className="w-5 h-5" />
+  1567→            {pc.createMemoryBook}
+  1568→          </motion.button>
+  1569→          <motion.button
+  1570→            className="flex items-center justify-center gap-2 px-6 py-3 bg-white/20 backdrop-blur-sm text-white rounded-xl font-bold border border-white/30"
+  1571→            whileHover={{ scale: 1.05 }}
+  1572→            whileTap={{ scale: 0.95 }}
+  1573→          >
+  1574→            <Download className="w-5 h-5" />
+  1575→            {pc.downloadPdf}
+  1576→          </motion.button>
+  1577→        </div>
+  1578→      </motion.div>
+  1579→    </div>
+  1580→  )
+  1581→}
+  1582→

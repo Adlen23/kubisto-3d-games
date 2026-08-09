@@ -157,6 +157,11 @@ export const translations = {
         assistant: 'مساعد ذكي',
         weeklyReport: 'التقرير الأسبوعي',
         store: 'متجر كوبيستو',
+        childDashboard: 'لوحة تتبع الطفل',
+        contentControl: 'التحكم في المحتوى',
+        writingSkills: 'مهارات الكتابة',
+        readingLog: 'سجل القراءة',
+        tutorFeedback: 'ملاحظات المعلم',
         memoryBox: 'صندوق الذكريات',
       },
       // Child Progress
@@ -482,6 +487,11 @@ export const translations = {
         assistant: 'AI Assistant',
         weeklyReport: 'Weekly Report',
         store: 'Kopisto Store',
+        childDashboard: 'Child Dashboard',
+        contentControl: 'Content Control',
+        writingSkills: 'Writing Skills',
+        readingLog: 'Reading Log',
+        tutorFeedback: 'Tutor Feedback',
         memoryBox: 'Memory Box',
       },
       // Child Progress

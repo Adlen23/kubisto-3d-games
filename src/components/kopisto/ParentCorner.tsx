@@ -12,14 +12,20 @@ import {
   Trophy, Target, Zap, Feather, Baby, GraduationCap,
   Shield, Moon, Globe, Music, TreePine, Fish,
   Gift, Stamp, Crown, FileText, Image as ImageIcon,
-  CheckCircle2, X, Plus, ChevronLeft, ChevronRight
+  CheckCircle2, X, Plus, ChevronLeft, ChevronRight,
+  Calendar, ClipboardList, School, Smartphone, Trash2,
+  Flame, Medal, ThumbsUp, Bell, Bookmark, Share2,
+  BookHeart, PencilRuler, Utensils, Dumbbell, Languages,
+  AlarmClock, Wifi, Settings, Crown as CrownIcon, Printer,
+  Smile, Frown, Meh, ClipboardCheck, PenTool, BookCheck,
+  Filter, Eye as EyeIcon, ShieldCheck, MessageSquare, UserCog
 } from 'lucide-react'
 import Image from 'next/image'
 
 // ========================
 // Types
 // ========================
-type TabId = 'progress' | 'storyCreator' | 'videos' | 'tips' | 'certificates' | 'assistant' | 'weeklyReport' | 'store' | 'memoryBox'
+type TabId = 'progress' | 'storyCreator' | 'videos' | 'tips' | 'certificates' | 'assistant' | 'weeklyReport' | 'store' | 'memoryBox' | 'childDashboard' | 'contentControl' | 'writingSkills' | 'readingLog' | 'tutorFeedback'
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -39,11 +45,16 @@ interface MemoryItem {
 // ========================
 const tabConfig: Array<{ id: TabId; icon: React.ReactNode; color: string; emoji: string }> = [
   { id: 'progress', icon: <BarChart3 className="w-5 h-5" />, color: 'from-sky-400 to-sky-600', emoji: '📊' },
+  { id: 'childDashboard', icon: <ClipboardCheck className="w-5 h-5" />, color: 'from-indigo-400 to-blue-600', emoji: '📋' },
   { id: 'storyCreator', icon: <BookOpen className="w-5 h-5" />, color: 'from-orange-400 to-amber-500', emoji: '📖' },
+  { id: 'writingSkills', icon: <PenTool className="w-5 h-5" />, color: 'from-fuchsia-400 to-purple-600', emoji: '✍️' },
+  { id: 'readingLog', icon: <BookCheck className="w-5 h-5" />, color: 'from-lime-400 to-green-600', emoji: '📚' },
   { id: 'videos', icon: <Video className="w-5 h-5" />, color: 'from-rose-400 to-pink-600', emoji: '🎬' },
   { id: 'tips', icon: <Lightbulb className="w-5 h-5" />, color: 'from-yellow-400 to-amber-500', emoji: '💡' },
+  { id: 'tutorFeedback', icon: <MessageSquare className="w-5 h-5" />, color: 'from-teal-400 to-cyan-600', emoji: '💬' },
   { id: 'certificates', icon: <Award className="w-5 h-5" />, color: 'from-emerald-400 to-teal-600', emoji: '🏆' },
   { id: 'assistant', icon: <MessageCircle className="w-5 h-5" />, color: 'from-violet-400 to-purple-600', emoji: '🤖' },
+  { id: 'contentControl', icon: <ShieldCheck className="w-5 h-5" />, color: 'from-red-400 to-rose-600', emoji: '🛡️' },
   { id: 'weeklyReport', icon: <TrendingUp className="w-5 h-5" />, color: 'from-cyan-400 to-sky-600', emoji: '📈' },
   { id: 'store', icon: <ShoppingBag className="w-5 h-5" />, color: 'from-orange-400 to-red-500', emoji: '🛒' },
   { id: 'memoryBox', icon: <Camera className="w-5 h-5" />, color: 'from-pink-400 to-rose-600', emoji: '📸' },
@@ -222,6 +233,11 @@ export default function ParentCorner() {
             {activeTab === 'weeklyReport' && <WeeklyReportSection />}
             {activeTab === 'store' && <StoreSection />}
             {activeTab === 'memoryBox' && <MemoryBoxSection />}
+            {activeTab === 'childDashboard' && <ChildDashboardSection />}
+            {activeTab === 'contentControl' && <ContentControlSection />}
+            {activeTab === 'writingSkills' && <WritingSkillsSection />}
+            {activeTab === 'readingLog' && <ReadingLogSection />}
+            {activeTab === 'tutorFeedback' && <TutorFeedbackSection />}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -1723,7 +1739,7 @@ function StoreSection() {
               <h4 className="font-bold text-sky-900 mb-1">{product.title}</h4>
               <p className="text-sky-500/70 text-sm mb-3">{product.desc}</p>
               <button className="w-full py-2.5 rounded-xl bg-sky-50 text-sky-500 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-sky-100 transition-colors">
-                <Bell className="w-4 h-4" />
+                <StoreBell className="w-4 h-4" />
                 {pc.notify}
               </button>
             </div>
@@ -1734,8 +1750,8 @@ function StoreSection() {
   )
 }
 
-// Bell icon component for store
-function Bell({ className }: { className?: string }) {
+// Bell icon component for store (local - renamed to avoid conflict with lucide-react Bell)
+function StoreBell({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
@@ -1915,6 +1931,624 @@ function MemoryBoxSection() {
           </motion.button>
         </div>
       </motion.div>
+    </div>
+  )
+}
+
+// ========================
+// Child Dashboard Section (لوحة تتبع الطفل)
+// ========================
+function ChildDashboardSection() {
+  const { isAr } = useLanguage()
+
+  const dashboardStats = [
+    { icon: '⏰', value: '127', label: isAr ? 'دقيقة هذا الأسبوع' : 'min this week', color: 'from-sky-400 to-blue-500' },
+    { icon: '🎮', value: '15', label: isAr ? 'لعبة مكتملة' : 'games completed', color: 'from-emerald-400 to-teal-500' },
+    { icon: '📖', value: '3', label: isAr ? 'قصص مقروءة' : 'stories read', color: 'from-amber-400 to-orange-500' },
+    { icon: '✍️', value: '8', label: isAr ? 'كتابات منشورة' : 'writings published', color: 'from-violet-400 to-purple-500' },
+  ]
+
+  const recentActivities = [
+    { type: 'game', icon: '🎮', title: isAr ? 'تحدي الرياضيات' : 'Math Quiz Challenge', time: isAr ? 'منذ ساعتين' : '2 hours ago', score: 85 },
+    { type: 'story', icon: '📖', title: isAr ? 'كنز الأرنب الحكيم' : 'The Wise Rabbit\'s Treasure', time: isAr ? 'أمس' : 'Yesterday', score: 100 },
+    { type: 'writing', icon: '✍️', title: isAr ? 'مغامرتي في الفضاء' : 'My Space Adventure', time: isAr ? 'منذ يومين' : '2 days ago', score: 92 },
+    { type: 'game', icon: '🎨', title: isAr ? 'لوحة الرسم' : 'Drawing Canvas', time: isAr ? 'منذ 3 أيام' : '3 days ago', score: 78 },
+  ]
+
+  return (
+    <div className="space-y-6">
+      {/* Overview Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {dashboardStats.map((stat, i) => (
+          <motion.div
+            key={i}
+            className="bg-white rounded-2xl p-5 border border-sky-100 shadow-sm"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+            whileHover={{ y: -3 }}
+          >
+            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center text-2xl mb-3`}>
+              {stat.icon}
+            </div>
+            <div className="text-2xl font-bold text-sky-900">{stat.value}</div>
+            <div className="text-xs text-sky-500 mt-1">{stat.label}</div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Recent Activity Feed */}
+      <motion.div
+        className="bg-white rounded-2xl p-5 border border-sky-100 shadow-sm"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <h4 className="font-bold text-sky-900 mb-4 flex items-center gap-2">
+          <Clock className="w-5 h-5 text-sky-500" />
+          {isAr ? 'النشاط الأخير' : 'Recent Activity'}
+        </h4>
+        <div className="space-y-3">
+          {recentActivities.map((activity, i) => (
+            <motion.div
+              key={i}
+              className="flex items-center gap-3 p-3 rounded-xl bg-sky-50/50 hover:bg-sky-50 transition-colors"
+              initial={{ opacity: 0, x: isAr ? 20 : -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 + i * 0.05 }}
+            >
+              <span className="text-2xl">{activity.icon}</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sky-900 text-sm truncate">{activity.title}</p>
+                <p className="text-sky-400 text-xs">{activity.time}</p>
+              </div>
+              {activity.score > 0 && (
+                <div className="flex items-center gap-1">
+                  <div className="w-12 h-2 bg-sky-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${activity.score >= 90 ? 'bg-emerald-500' : activity.score >= 70 ? 'bg-amber-500' : 'bg-sky-500'}`}
+                      style={{ width: `${activity.score}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-bold text-sky-700">{activity.score}%</span>
+                </div>
+              )}
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Quick Actions */}
+      <motion.div
+        className="bg-gradient-to-br from-indigo-500 to-blue-600 rounded-2xl p-5 text-white shadow-lg"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+      >
+        <h4 className="font-bold mb-3 flex items-center gap-2">
+          <Zap className="w-5 h-5" />
+          {isAr ? 'إجراءات سريعة' : 'Quick Actions'}
+        </h4>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {(isAr ? [
+            { icon: '📝', label: 'تعيين مهمة' },
+            { icon: '🏆', label: 'منح شارة' },
+            { icon: '📩', label: 'رسالة لطفلك' },
+            { icon: '⏰', label: 'تحديد وقت' },
+          ] : [
+            { icon: '📝', label: 'Assign Task' },
+            { icon: '🏆', label: 'Award Badge' },
+            { icon: '📩', label: 'Message Child' },
+            { icon: '⏰', label: 'Set Timer' },
+          ]).map((action, i) => (
+            <button
+              key={i}
+              className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center hover:bg-white/25 transition-all"
+            >
+              <div className="text-2xl mb-1">{action.icon}</div>
+              <div className="text-xs font-semibold">{action.label}</div>
+            </button>
+          ))}
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
+// ========================
+// Content Control Section (التحكم في المحتوى)
+// ========================
+function ContentControlSection() {
+  const { isAr } = useLanguage()
+  const [settings, setSettings] = useState({
+    adFree: true,
+    moderated: true,
+    ageFilter: '5-8',
+    difficulty: 'medium',
+    allowedCategories: ['math', 'language', 'science', 'art'],
+    blockChat: true,
+    blockExternal: true,
+    sessionLimit: 60,
+  })
+
+  const categories = [
+    { id: 'math', ar: 'رياضيات', en: 'Math', emoji: '🧮' },
+    { id: 'language', ar: 'لغة', en: 'Language', emoji: '📝' },
+    { id: 'science', ar: 'علوم', en: 'Science', emoji: '🔬' },
+    { id: 'art', ar: 'فنون', en: 'Art', emoji: '🎨' },
+    { id: 'stories', ar: 'قصص', en: 'Stories', emoji: '📖' },
+    { id: 'music', ar: 'موسيقى', en: 'Music', emoji: '🎵' },
+  ]
+
+  const toggleCategory = (id: string) => {
+    setSettings(prev => ({
+      ...prev,
+      allowedCategories: prev.allowedCategories.includes(id)
+        ? prev.allowedCategories.filter(c => c !== id)
+        : [...prev.allowedCategories, id]
+    }))
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Safety Settings */}
+      <motion.div
+        className="bg-gradient-to-br from-red-500 to-rose-600 rounded-3xl p-6 text-white shadow-xl"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <ShieldCheck className="w-8 h-8" />
+          <div>
+            <h3 className="text-xl font-bold">{isAr ? 'سلامة طفلك' : 'Your Child\'s Safety'}</h3>
+            <p className="text-white/80 text-sm">{isAr ? 'بيئة آمنة خالية من الإعلانات' : 'Ad-free, safe environment'}</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 flex items-center justify-between">
+            <span className="text-sm font-semibold flex items-center gap-2"><Lock className="w-4 h-4" /> {isAr ? 'خالٍ من الإعلانات' : 'Ad-Free'}</span>
+            <span className="bg-emerald-400 text-white text-xs px-2 py-0.5 rounded-full">{isAr ? 'مفعّل' : 'ON'}</span>
+          </div>
+          <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 flex items-center justify-between">
+            <span className="text-sm font-semibold flex items-center gap-2"><Eye className="w-4 h-4" /> {isAr ? 'مراقبة المحتوى' : 'Content Moderated'}</span>
+            <span className="bg-emerald-400 text-white text-xs px-2 py-0.5 rounded-full">{isAr ? 'مفعّل' : 'ON'}</span>
+          </div>
+          <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 flex items-center justify-between">
+            <span className="text-sm font-semibold flex items-center gap-2"><MessageSquare className="w-4 h-4" /> {isAr ? 'منع الدردشة' : 'No Open Chat'}</span>
+            <span className="bg-emerald-400 text-white text-xs px-2 py-0.5 rounded-full">{isAr ? 'مفعّل' : 'ON'}</span>
+          </div>
+          <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 flex items-center justify-between">
+            <span className="text-sm font-semibold flex items-center gap-2"><Globe className="w-4 h-4" /> {isAr ? 'منع الروابط الخارجية' : 'Block External Links'}</span>
+            <span className="bg-emerald-400 text-white text-xs px-2 py-0.5 rounded-full">{isAr ? 'مفعّل' : 'ON'}</span>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Age & Difficulty */}
+      <motion.div
+        className="bg-white rounded-2xl p-5 border border-sky-100 shadow-sm"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <h4 className="font-bold text-sky-900 mb-4 flex items-center gap-2">
+          <Baby className="w-5 h-5 text-sky-500" />
+          {isAr ? 'الفئة العمرية والمستوى' : 'Age & Difficulty'}
+        </h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-semibold text-sky-700 mb-2">{isAr ? 'العمر' : 'Age Range'}</label>
+            <select
+              value={settings.ageFilter}
+              onChange={(e) => setSettings({ ...settings, ageFilter: e.target.value })}
+              className="w-full px-4 py-2 rounded-xl border border-sky-200 text-sky-900"
+            >
+              <option value="3-5">{isAr ? '3-5 سنوات' : '3-5 years'}</option>
+              <option value="5-8">{isAr ? '5-8 سنوات' : '5-8 years'}</option>
+              <option value="8-12">{isAr ? '8-12 سنة' : '8-12 years'}</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-sky-700 mb-2">{isAr ? 'مستوى الصعوبة' : 'Difficulty Level'}</label>
+            <select
+              value={settings.difficulty}
+              onChange={(e) => setSettings({ ...settings, difficulty: e.target.value })}
+              className="w-full px-4 py-2 rounded-xl border border-sky-200 text-sky-900"
+            >
+              <option value="easy">{isAr ? 'سهل' : 'Easy'}</option>
+              <option value="medium">{isAr ? 'متوسط' : 'Medium'}</option>
+              <option value="hard">{isAr ? 'صعب' : 'Hard'}</option>
+            </select>
+          </div>
+        </div>
+        <div className="mt-4">
+          <label className="block text-sm font-semibold text-sky-700 mb-2">
+            {isAr ? `الحد الأقصى للجلسة: ${settings.sessionLimit} دقيقة` : `Session limit: ${settings.sessionLimit} min`}
+          </label>
+          <input
+            type="range"
+            min="15"
+            max="120"
+            step="15"
+            value={settings.sessionLimit}
+            onChange={(e) => setSettings({ ...settings, sessionLimit: parseInt(e.target.value) })}
+            className="w-full accent-sky-500"
+          />
+        </div>
+      </motion.div>
+
+      {/* Allowed Categories */}
+      <motion.div
+        className="bg-white rounded-2xl p-5 border border-sky-100 shadow-sm"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <h4 className="font-bold text-sky-900 mb-4 flex items-center gap-2">
+          <Filter className="w-5 h-5 text-sky-500" />
+          {isAr ? 'التصنيفات المسموحة' : 'Allowed Categories'}
+        </h4>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {categories.map(cat => (
+            <button
+              key={cat.id}
+              onClick={() => toggleCategory(cat.id)}
+              className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                settings.allowedCategories.includes(cat.id)
+                  ? 'bg-sky-50 border-sky-400 text-sky-700'
+                  : 'bg-gray-50 border-gray-200 text-gray-400'
+              }`}
+            >
+              <span className="text-xl">{cat.emoji}</span>
+              <span className="text-sm font-semibold">{isAr ? cat.ar : cat.en}</span>
+              {settings.allowedCategories.includes(cat.id) && <CheckCircle2 className="w-4 h-4 text-sky-500 ml-auto" />}
+            </button>
+          ))}
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
+// ========================
+// Writing Skills Section (مهارات الكتابة)
+// ========================
+function WritingSkillsSection() {
+  const { isAr } = useLanguage()
+
+  const skills = [
+    { name: isAr ? 'الإملاء' : 'Spelling', level: 75, color: 'from-sky-400 to-blue-500', icon: '📝' },
+    { name: isAr ? 'القواعد' : 'Grammar', level: 60, color: 'from-emerald-400 to-teal-500', icon: '📐' },
+    { name: isAr ? 'المفردات' : 'Vocabulary', level: 85, color: 'from-amber-400 to-orange-500', icon: '📚' },
+    { name: isAr ? 'علامات الترقيم' : 'Punctuation', level: 50, color: 'from-rose-400 to-pink-500', icon: '❗' },
+    { name: isAr ? 'الكتابة الإبداعية' : 'Creative Writing', level: 70, color: 'from-violet-400 to-purple-500', icon: '✍️' },
+    { name: isAr ? 'فهم القراءة' : 'Reading Comprehension', level: 90, color: 'from-cyan-400 to-sky-500', icon: '📖' },
+  ]
+
+  const writings = [
+    { title: isAr ? 'مغامرتي في الغابة' : 'My Forest Adventure', date: isAr ? 'اليوم' : 'Today', words: 120, rating: 4 },
+    { title: isAr ? 'صديقي كوبيستو' : 'My Friend Kopisto', date: isAr ? 'أمس' : 'Yesterday', words: 85, rating: 5 },
+    { title: isAr ? 'رحلة إلى الفضاء' : 'Journey to Space', date: isAr ? 'منذ 3 أيام' : '3 days ago', words: 200, rating: 4 },
+  ]
+
+  return (
+    <div className="space-y-6">
+      {/* Skills Overview */}
+      <motion.div
+        className="bg-gradient-to-br from-fuchsia-500 to-purple-600 rounded-3xl p-6 text-white shadow-xl"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <PenTool className="w-8 h-8" />
+          <div>
+            <h3 className="text-xl font-bold">{isAr ? 'مهارات الكتابة' : 'Writing Skills'}</h3>
+            <p className="text-white/80 text-sm">{isAr ? 'تتبع تطور مهارات طفلك' : 'Track your child\'s writing development'}</p>
+          </div>
+        </div>
+        <div className="space-y-3">
+          {skills.map((skill, i) => (
+            <div key={i}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm font-semibold flex items-center gap-2">
+                  <span className="text-lg">{skill.icon}</span>
+                  {skill.name}
+                </span>
+                <span className="text-sm font-bold">{skill.level}%</span>
+              </div>
+              <div className="bg-white/15 backdrop-blur-sm rounded-full h-2.5 overflow-hidden">
+                <motion.div
+                  className={`h-full rounded-full bg-gradient-to-r ${skill.color}`}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${skill.level}%` }}
+                  transition={{ duration: 1, delay: i * 0.1 }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Recent Writings */}
+      <motion.div
+        className="bg-white rounded-2xl p-5 border border-sky-100 shadow-sm"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <h4 className="font-bold text-sky-900 mb-4 flex items-center gap-2">
+          <Feather className="w-5 h-5 text-violet-500" />
+          {isAr ? 'كتابات طفلك الأخيرة' : 'Your Child\'s Recent Writings'}
+        </h4>
+        <div className="space-y-3">
+          {writings.map((writing, i) => (
+            <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-violet-50/50 hover:bg-violet-50 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center text-white">
+                <Feather className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-sky-900 text-sm">{writing.title}</p>
+                <p className="text-xs text-sky-500">{writing.date} • {writing.words} {isAr ? 'كلمة' : 'words'}</p>
+              </div>
+              <div className="flex items-center gap-0.5">
+                {Array.from({ length: 5 }).map((_, s) => (
+                  <Star key={s} className={`w-3.5 h-3.5 ${s < writing.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Writing Prompt */}
+      <motion.div
+        className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-5 border-2 border-amber-200"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+      >
+        <h4 className="font-bold text-amber-900 mb-2 flex items-center gap-2">
+          <Lightbulb className="w-5 h-5 text-amber-500" />
+          {isAr ? 'فكرة كتابة اليوم' : 'Today\'s Writing Prompt'}
+        </h4>
+        <p className="text-amber-800 text-sm leading-relaxed mb-3">
+          {isAr
+            ? 'تخيّل أنك تستيقظ في صباح يوم لتجد أن كوبيستو قد ترك لك رسالة وكنزًا صغيرًا. اكتب قصة عن مغامرتك مع الكنز!'
+            : 'Imagine waking up to find Kopisto has left you a note and a small treasure. Write a story about your adventure with the treasure!'}
+        </p>
+        <button className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-2 rounded-xl font-semibold text-sm">
+          {isAr ? 'ابدأ الكتابة ✍️' : 'Start Writing ✍️'}
+        </button>
+      </motion.div>
+    </div>
+  )
+}
+
+// ========================
+// Reading Log Section (سجل القراءة)
+// ========================
+function ReadingLogSection() {
+  const { isAr } = useLanguage()
+
+  const [readBooks, setReadBooks] = useState([
+    { id: 1, title: isAr ? 'كنز الأرنب الحكيم' : 'The Wise Rabbit\'s Treasure', date: '2026-07-01', minutes: 8, rating: 5 },
+    { id: 2, title: isAr ? 'النجمة التي أرادت أن تنام' : 'The Sleepy Little Star', date: '2026-06-28', minutes: 6, rating: 5 },
+    { id: 3, title: isAr ? 'السلحفاة الشجاعة' : 'The Brave Turtle', date: '2026-06-25', minutes: 10, rating: 4 },
+  ])
+
+  const totalMinutes = readBooks.reduce((sum, b) => sum + b.minutes, 0)
+  const totalBooks = readBooks.length
+
+  return (
+    <div className="space-y-6">
+      {/* Reading Stats */}
+      <motion.div
+        className="bg-gradient-to-br from-lime-500 to-green-600 rounded-3xl p-6 text-white shadow-xl"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <BookCheck className="w-8 h-8" />
+          <div>
+            <h3 className="text-xl font-bold">{isAr ? 'سجل القراءة' : 'Reading Log'}</h3>
+            <p className="text-white/80 text-sm">{isAr ? 'تابع رحلة طفلك مع القراءة' : 'Track your child\'s reading journey'}</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center">
+            <div className="text-3xl font-bold">{totalBooks}</div>
+            <div className="text-xs text-white/80">{isAr ? 'قصص مقروءة' : 'stories read'}</div>
+          </div>
+          <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center">
+            <div className="text-3xl font-bold">{totalMinutes}</div>
+            <div className="text-xs text-white/80">{isAr ? 'دقيقة قراءة' : 'minutes read'}</div>
+          </div>
+          <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center">
+            <div className="text-3xl font-bold">{(totalMinutes / totalBooks).toFixed(1)}</div>
+            <div className="text-xs text-white/80">{isAr ? 'متوسط الدقائق' : 'avg per book'}</div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Reading List */}
+      <motion.div
+        className="bg-white rounded-2xl p-5 border border-sky-100 shadow-sm"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <h4 className="font-bold text-sky-900 mb-4 flex items-center gap-2">
+          <BookOpen className="w-5 h-5 text-green-500" />
+          {isAr ? 'القصص المقروءة' : 'Books Read'}
+        </h4>
+        <div className="space-y-3">
+          {readBooks.map((book) => (
+            <div key={book.id} className="flex items-center gap-3 p-3 rounded-xl bg-green-50/50 hover:bg-green-50 transition-colors">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-lime-400 to-green-500 flex items-center justify-center text-white">
+                <BookCheck className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-sky-900 text-sm">{book.title}</p>
+                <p className="text-xs text-sky-500">{book.date} • {book.minutes} {isAr ? 'دقيقة' : 'min'}</p>
+              </div>
+              <div className="flex items-center gap-0.5">
+                {Array.from({ length: 5 }).map((_, s) => (
+                  <Star key={s} className={`w-3.5 h-3.5 ${s < book.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Reading Goal */}
+      <motion.div
+        className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-5 border-2 border-emerald-200"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <h4 className="font-bold text-emerald-900 mb-3 flex items-center gap-2">
+          <Target className="w-5 h-5 text-emerald-500" />
+          {isAr ? 'هدف القراءة الأسبوعي' : 'Weekly Reading Goal'}
+        </h4>
+        <div className="bg-white rounded-full h-4 overflow-hidden mb-2">
+          <motion.div
+            className="h-full bg-gradient-to-r from-emerald-400 to-teal-500"
+            initial={{ width: 0 }}
+            animate={{ width: '60%' }}
+            transition={{ duration: 1 }}
+          />
+        </div>
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-emerald-700 font-semibold">{isAr ? '3 من 5 قصص' : '3 of 5 stories'}</span>
+          <span className="text-emerald-600 font-bold">60%</span>
+        </div>
+        <p className="text-xs text-emerald-600 mt-2">
+          {isAr ? '🏆 اقرأ قصتين آخرتين للحصول على شارة القارئ النهم!' : '🏆 Read 2 more stories to earn the Book Worm badge!'}
+        </p>
+      </motion.div>
+    </div>
+  )
+}
+
+// ========================
+// Tutor Feedback Section (ملاحظات المعلم)
+// ========================
+function TutorFeedbackSection() {
+  const { isAr } = useLanguage()
+
+  const feedback = [
+    {
+      tutor: isAr ? 'أ. سارة' : 'Ms. Sarah',
+      subject: isAr ? 'الرياضيات' : 'Math',
+      avatar: '👩‍🏫',
+      date: isAr ? 'اليوم' : 'Today',
+      rating: 5,
+      comment: isAr
+        ? 'أحمد أبدع اليوم في حل مسائل الجمع! أراه متحمساً للتعلم. ننصح بممارسة الطرح في المنزل.'
+        : 'Ahmed excelled at addition problems today! He\'s enthusiastic about learning. We recommend practicing subtraction at home.',
+      writing: isAr ? 'حل 10 مسائل بنجاح' : 'Solved 10 problems correctly',
+    },
+    {
+      tutor: isAr ? 'أ. فاطمة' : 'Ms. Fatima',
+      subject: isAr ? 'اللغة العربية' : 'Arabic',
+      avatar: '👩‍🎓',
+      date: isAr ? 'أمس' : 'Yesterday',
+      rating: 4,
+      comment: isAr
+        ? 'كتابة أحمد عن "مغامرتي في الغابة" رائعة! استخدم كلمات جديدة. يحتاج للتركيز على علامات الترقيم.'
+        : 'Ahmed\'s writing about "My Forest Adventure" is wonderful! He used new words. Needs to focus on punctuation.',
+      writing: isAr ? 'كتب 120 كلمة' : 'Wrote 120 words',
+    },
+    {
+      tutor: isAr ? 'أ. أحمد' : 'Mr. Ahmed',
+      subject: isAr ? 'العلوم' : 'Science',
+      avatar: '👨‍🔬',
+      date: isAr ? 'منذ 3 أيام' : '3 days ago',
+      rating: 5,
+      comment: isAr
+        ? 'أحمد أظهر فضولاً كبيراً في درس المجموعة الشمسية. أسئلته ذكية! شجعوه على مشاهدة فيديوهات تعليمية عن الفضاء.'
+        : 'Ahmed showed great curiosity in the solar system lesson. His questions were smart! Encourage him to watch educational space videos.',
+      writing: isAr ? 'أكمل اختبار الكواكب' : 'Completed planet quiz',
+    },
+  ]
+
+  const [replyText, setReplyText] = useState('')
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <motion.div
+        className="bg-gradient-to-br from-teal-500 to-cyan-600 rounded-3xl p-6 text-white shadow-xl"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <div className="flex items-center gap-3 mb-2">
+          <MessageSquare className="w-8 h-8" />
+          <div>
+            <h3 className="text-xl font-bold">{isAr ? 'ملاحظات المعلمين' : 'Tutor Feedback'}</h3>
+            <p className="text-white/80 text-sm">{isAr ? 'تقييمات وتعليقات من معلمي طفلك' : 'Reviews and comments from your child\'s tutors'}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-4 mt-4">
+          <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center flex-1">
+            <div className="text-2xl font-bold">4.7</div>
+            <div className="text-xs text-white/80">{isAr ? 'متوسط التقييم' : 'Average rating'}</div>
+          </div>
+          <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 text-center flex-1">
+            <div className="text-2xl font-bold">3</div>
+            <div className="text-xs text-white/80">{isAr ? 'ملاحظات جديدة' : 'New feedback'}</div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Feedback Cards */}
+      {feedback.map((fb, i) => (
+        <motion.div
+          key={i}
+          className="bg-white rounded-2xl p-5 border border-sky-100 shadow-sm"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 * i }}
+        >
+          <div className="flex items-start gap-3 mb-3">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center text-2xl">
+              {fb.avatar}
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <h4 className="font-bold text-sky-900">{fb.tutor}</h4>
+                <span className="text-xs bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full font-semibold">{fb.subject}</span>
+              </div>
+              <p className="text-xs text-sky-500">{fb.date} • {fb.writing}</p>
+            </div>
+            <div className="flex items-center gap-0.5">
+              {Array.from({ length: 5 }).map((_, s) => (
+                <Star key={s} className={`w-4 h-4 ${s < fb.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`} />
+              ))}
+            </div>
+          </div>
+          <div className="bg-gradient-to-br from-teal-50 to-cyan-50 rounded-xl p-4 border border-teal-100">
+            <p className="text-sky-800 text-sm leading-relaxed">{fb.comment}</p>
+          </div>
+
+          {/* Reply box */}
+          <div className="mt-3 flex items-center gap-2">
+            <input
+              type="text"
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              placeholder={isAr ? 'اكتب ردّك للمعلم...' : 'Write a reply to the tutor...'}
+              className="flex-1 px-4 py-2 rounded-full border border-sky-200 text-sm focus:border-teal-400 outline-none"
+            />
+            <button className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-1">
+              <Send className="w-4 h-4" />
+              {isAr ? 'إرسال' : 'Reply'}
+            </button>
+          </div>
+        </motion.div>
+      ))}
     </div>
   )
 }
